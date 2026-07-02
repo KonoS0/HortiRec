@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useId } from 'react';
+import { useState, useId, useMemo } from 'react';
 import { ArrowLeft, Trash2, FileDown, CheckSquare, Square, Calendar, Tag, AlertCircle, X, Check, Info } from 'lucide-react';
 import { RegisteredProduct } from '../types';
 import { PRODUCTS_DATABASE } from '../productsData';
@@ -148,6 +148,47 @@ export default function ProductTable({
     ? products.filter(p => selectedProducts.includes(p.name))
     : products;
 
+  // Split products into pages dynamically to avoid overflow and respect maximum 8 items per page
+  const productPages = useMemo(() => {
+    const pages: RegisteredProduct[][] = [];
+    let currentPage: RegisteredProduct[] = [];
+    let currentHeight = 0;
+    const maxHeight = 680; // Available vertical height in pixels for product rows on a page
+    const maxItems = 8;
+
+    for (const product of productsToExport) {
+      // Estimate height of this product row:
+      // Base padding + name + compact barcode is around 70px.
+      let estimatedRowHeight = 70;
+      
+      // If the product name is long (e.g., > 28 chars), it wraps to multiple lines
+      if (product.name.length > 28) {
+        estimatedRowHeight += Math.ceil((product.name.length - 28) / 25) * 16;
+      }
+
+      // If there are boxes, add some space for the extra line below the weight
+      if (product.boxes && product.boxes > 0) {
+        estimatedRowHeight += 14;
+      }
+
+      // If the current item would cause either of the limits to be exceeded, start a new page
+      if (currentPage.length >= maxItems || (currentPage.length > 0 && currentHeight + estimatedRowHeight > maxHeight)) {
+        pages.push(currentPage);
+        currentPage = [product];
+        currentHeight = estimatedRowHeight;
+      } else {
+        currentPage.push(product);
+        currentHeight += estimatedRowHeight;
+      }
+    }
+
+    if (currentPage.length > 0) {
+      pages.push(currentPage);
+    }
+
+    return pages;
+  }, [productsToExport]);
+
   // Optimized lightweight React-DOM-based PDF generator
   const handleExportPDF = async () => {
     if (productsToExport.length === 0) {
@@ -161,8 +202,7 @@ export default function ProductTable({
       // Wait for React to render the high-fidelity preview sheet modal and paint all Barcode SVGs
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const itemsPerPage = 8;
-      const totalPages = Math.ceil(productsToExport.length / itemsPerPage);
+      const totalPages = productPages.length;
 
       const pdf = new jsPDF({
         orientation: 'p',
@@ -246,12 +286,7 @@ export default function ProductTable({
     day: 'numeric',
   });
 
-  // Split products into pages of maximum 8 items for high-fidelity PDF generation
-  const itemsPerPage = 8;
-  const productPages: typeof products[] = [];
-  for (let i = 0; i < productsToExport.length; i += itemsPerPage) {
-    productPages.push(productsToExport.slice(i, i + itemsPerPage));
-  }
+  // Pages are dynamically calculated to prevent page overflows and handle clean breaks
 
   return (
     <div className="w-full max-w-5xl mx-auto bg-white rounded-2xl border border-slate-100 shadow-xl shadow-slate-100/40 p-5 md:p-8">
@@ -633,18 +668,18 @@ export default function ProductTable({
                     </thead>
                     <tbody>
                       {pageProducts.map((p, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '14px', backgroundColor: idx % 2 === 1 ? '#fafafa' : '#ffffff' }}>
-                          <td style={{ padding: '12px', textAlign: 'left' }}>
-                            <div style={{ fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>{p.name}</div>
-                            <div style={{ backgroundColor: '#ffffff', padding: '4px', borderRadius: '4px', border: '1px solid #e2e8f0', display: 'inline-block' }}>
-                              <Barcode value={getProductCode(p.name)} />
+                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px', backgroundColor: idx % 2 === 1 ? '#fafafa' : '#ffffff', verticalAlign: 'middle' }}>
+                          <td style={{ padding: '8px 12px', textAlign: 'left', verticalAlign: 'middle' }}>
+                            <div style={{ fontWeight: '600', color: '#0f172a', marginBottom: '4px', maxWidth: '340px', wordBreak: 'break-word', lineHeight: '1.2' }}>{p.name}</div>
+                            <div style={{ display: 'inline-block', verticalAlign: 'middle', marginTop: '2px' }}>
+                              <Barcode value={getProductCode(p.name)} height={26} width={1.2} fontSize={9} />
                             </div>
                           </td>
-                          <td style={{ padding: '12px', textAlign: 'center', fontFamily: 'monospace', fontSize: '12px', color: '#475569' }}>{p.type}</td>
-                          <td style={{ padding: '12px', textAlign: 'right', fontWeight: 'bold', color: '#0f172a', fontFamily: 'monospace' }}>
+                          <td style={{ padding: '8px 12px', textAlign: 'center', fontFamily: 'monospace', fontSize: '12px', color: '#475569', verticalAlign: 'middle' }}>{p.type}</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 'bold', color: '#0f172a', fontFamily: 'monospace', verticalAlign: 'middle' }}>
                             {p.quantity.toFixed(2)}
                             {p.boxes && p.boxes > 0 && (
-                              <span style={{ display: 'block', fontSize: '10px', color: '#94a3b8', fontFamily: 'sans-serif', fontWeight: 'normal', marginTop: '2px' }}>
+                              <span style={{ display: 'block', fontSize: '10px', color: '#64748b', fontFamily: 'sans-serif', fontWeight: 'normal', marginTop: '1px' }}>
                                 {p.boxes} cx
                               </span>
                             )}
