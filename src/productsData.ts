@@ -124,7 +124,7 @@ export const PRODUCTS_DATABASE: ProductTemplate[] = [
   { code: "7898701660776", name: "UVA BEMFRUTI VERM.S/SEMENTE 500G BJ", type: "BJ" },
   { code: "7898701660790", name: "UVA BEMFRUTI VITORIA S/SEM.500G BJ", type: "BJ" },
   { code: "7898703000464", name: "UVA CRIMSON 500G BJ", type: "BJ" },
-  { code: "7898949642009", name: "UVA ITALIA 500G BJ", type: "BJ" },
+  { code: "7898948642009", name: "UVA ITALIA 500G BJ", type: "BJ" },
   { code: "7898949747932", name: "UVA THOMPSON 500G BJ", type: "BJ" },
   { code: "7898949747949", name: "UVA VITORIA 500G BJ", type: "BJ" }
 ];
