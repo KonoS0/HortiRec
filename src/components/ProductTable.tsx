@@ -89,12 +89,19 @@ export default function ProductTable({
     return match ? match.code : '0000000000000';
   };
 
+  // Ensure products are always strictly sorted in alphabetical order (pt-BR)
+  const sortedProducts = useMemo(() => {
+    return [...products].sort((a, b) =>
+      a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+    );
+  }, [products]);
+
   // Select all or deselect all
   const handleSelectAll = () => {
-    if (selectedProducts.length === products.length) {
+    if (selectedProducts.length === sortedProducts.length) {
       setSelectedProducts([]);
     } else {
-      setSelectedProducts(products.map(p => p.name));
+      setSelectedProducts(sortedProducts.map(p => p.name));
     }
   };
 
@@ -129,7 +136,7 @@ export default function ProductTable({
 
   // Delete all products with beautiful confirm modal
   const handleClearAllClick = () => {
-    if (products.length === 0) return;
+    if (sortedProducts.length === 0) return;
     showConfirm(
       'Limpar Toda a Tabela',
       'Aviso: Isso irá excluir TODOS os produtos registrados! Tem certeza que deseja continuar?',
@@ -144,9 +151,11 @@ export default function ProductTable({
   };
 
   // Only export selected products if there are any, otherwise export all products
-  const productsToExport = selectedProducts.length > 0
-    ? products.filter(p => selectedProducts.includes(p.name))
-    : products;
+  const productsToExport = useMemo(() => {
+    return selectedProducts.length > 0
+      ? sortedProducts.filter(p => selectedProducts.includes(p.name))
+      : sortedProducts;
+  }, [selectedProducts, sortedProducts]);
 
   // Split products into pages dynamically to avoid overflow and respect maximum 8 items per page
   const productPages = useMemo(() => {
@@ -341,7 +350,7 @@ export default function ProductTable({
                       className="p-1 rounded text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer"
                       title="Selecionar Todos"
                     >
-                      {selectedProducts.length === products.length ? (
+                      {selectedProducts.length === sortedProducts.length && sortedProducts.length > 0 ? (
                         <CheckSquare className="h-4 w-4 text-slate-800" />
                       ) : (
                         <Square className="h-4 w-4" />
@@ -363,7 +372,7 @@ export default function ProductTable({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {products.map((product) => {
+                {sortedProducts.map((product) => {
                   const isChecked = selectedProducts.includes(product.name);
                   return (
                     <tr
@@ -453,7 +462,7 @@ export default function ProductTable({
 
           {/* Mobile responsive Cards view (shown on small screens, hidden from md up) */}
           <div className="block md:hidden space-y-4">
-            {products.map((product) => {
+            {sortedProducts.map((product) => {
               const isChecked = selectedProducts.includes(product.name);
               return (
                 <div

@@ -24,9 +24,10 @@ export default function App() {
       if (saved) {
         const parsed = JSON.parse(saved);
         
+        let loadedList: RegisteredProduct[] = [];
         // Convert dictionary (from original HTML) to clean React list array
         if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-          const loadedList: RegisteredProduct[] = Object.values(parsed).map((item: any) => ({
+          loadedList = Object.values(parsed).map((item: any) => ({
             name: item.name,
             type: item.type,
             quantity: item.quantity,
@@ -35,10 +36,12 @@ export default function App() {
             originalWeight: item.originalWeight || undefined,
             timestamp: item.timestamp || Date.now(),
           }));
-          setProducts(loadedList);
         } else if (Array.isArray(parsed)) {
-          setProducts(parsed);
+          loadedList = parsed;
         }
+
+        loadedList.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+        setProducts(loadedList);
       }
     } catch (e) {
       console.error('Error reading localStorage registeredProducts:', e);
@@ -48,8 +51,11 @@ export default function App() {
   // Save list back as dictionary to maintain 100% compatibility with older records
   const saveProductsList = (list: RegisteredProduct[]) => {
     try {
+      const sortedList = [...list].sort((a, b) =>
+        a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+      );
       const dictionary: Record<string, Omit<RegisteredProduct, 'timestamp'>> = {};
-      list.forEach((p) => {
+      sortedList.forEach((p) => {
         dictionary[p.name] = {
           name: p.name,
           type: p.type,
@@ -60,7 +66,7 @@ export default function App() {
         };
       });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dictionary));
-      setProducts(list);
+      setProducts(sortedList);
     } catch (e) {
       console.error('Error saving to localStorage:', e);
     }
