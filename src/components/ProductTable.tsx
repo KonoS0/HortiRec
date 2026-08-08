@@ -4,7 +4,7 @@
  */
 
 import { useState, useId, useMemo } from 'react';
-import { ArrowLeft, Trash2, FileDown, CheckSquare, Square, Calendar, Tag, AlertCircle, X, Check, Info } from 'lucide-react';
+import { ArrowLeft, Trash2, FileDown, CheckSquare, Square, Calendar, Tag, AlertCircle, X, Check, Info, ArrowUpDown, ArrowDown, ArrowUp } from 'lucide-react';
 import { RegisteredProduct } from '../types';
 import { PRODUCTS_DATABASE } from '../productsData';
 import Barcode from './Barcode';
@@ -89,12 +89,31 @@ export default function ProductTable({
     return match ? match.code : '0000000000000';
   };
 
-  // Ensure products are always strictly sorted in alphabetical order (pt-BR)
+  const [sortBy, setSortBy] = useState<'quantity' | 'name'>('quantity');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+
+  // Ensure products are sorted by weight quantity (descending by default)
   const sortedProducts = useMemo(() => {
-    return [...products].sort((a, b) =>
-      a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
-    );
-  }, [products]);
+    return [...products].sort((a, b) => {
+      if (sortBy === 'quantity') {
+        const diff = sortOrder === 'desc' ? b.quantity - a.quantity : a.quantity - b.quantity;
+        if (diff !== 0) return diff;
+        return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
+      } else {
+        const diff = a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
+        return sortOrder === 'asc' ? diff : -diff;
+      }
+    });
+  }, [products, sortBy, sortOrder]);
+
+  const handleToggleSort = (field: 'quantity' | 'name') => {
+    if (sortBy === field) {
+      setSortOrder(prev => (prev === 'desc' ? 'asc' : 'desc'));
+    } else {
+      setSortBy(field);
+      setSortOrder(field === 'quantity' ? 'desc' : 'asc');
+    }
+  };
 
   // Select all or deselect all
   const handleSelectAll = () => {
@@ -358,13 +377,35 @@ export default function ProductTable({
                     </button>
                   </th>
                   <th className="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500 font-sans">
-                    Produto / Código de Barras
+                    <button
+                      onClick={() => handleToggleSort('name')}
+                      className="flex items-center gap-1.5 hover:text-slate-800 focus:outline-none cursor-pointer group"
+                      title="Clique para ordenar por nome"
+                    >
+                      <span>Produto / Código de Barras</span>
+                      {sortBy === 'name' ? (
+                        sortOrder === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-slate-800 shrink-0" /> : <ArrowDown className="h-3.5 w-3.5 text-slate-800 shrink-0" />
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 text-slate-400 opacity-60 group-hover:opacity-100 transition-opacity shrink-0" />
+                      )}
+                    </button>
                   </th>
                   <th className="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500 text-center font-sans w-24">
                     Unidade
                   </th>
-                  <th className="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500 text-right font-sans w-32">
-                    Quantidade Líquida
+                  <th className="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500 text-right font-sans w-40">
+                    <button
+                      onClick={() => handleToggleSort('quantity')}
+                      className="ml-auto flex items-center justify-end gap-1.5 hover:text-slate-800 focus:outline-none cursor-pointer group"
+                      title="Clique para ordenar por quantidade de peso"
+                    >
+                      <span>Quantidade Líquida</span>
+                      {sortBy === 'quantity' ? (
+                        sortOrder === 'desc' ? <ArrowDown className="h-3.5 w-3.5 text-slate-800 shrink-0" /> : <ArrowUp className="h-3.5 w-3.5 text-slate-800 shrink-0" />
+                      ) : (
+                        <ArrowUpDown className="h-3 w-3 text-slate-400 opacity-60 group-hover:opacity-100 transition-opacity shrink-0" />
+                      )}
+                    </button>
                   </th>
                   <th className="px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500 text-center font-sans w-40">
                     Classificação (NT / QB)

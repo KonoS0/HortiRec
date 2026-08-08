@@ -40,7 +40,7 @@ export default function App() {
           loadedList = parsed;
         }
 
-        loadedList.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+        loadedList.sort((a, b) => (b.quantity - a.quantity) || a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
         setProducts(loadedList);
       }
     } catch (e) {
@@ -52,7 +52,7 @@ export default function App() {
   const saveProductsList = (list: RegisteredProduct[]) => {
     try {
       const sortedList = [...list].sort((a, b) =>
-        a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+        (b.quantity - a.quantity) || a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
       );
       const dictionary: Record<string, Omit<RegisteredProduct, 'timestamp'>> = {};
       sortedList.forEach((p) => {
