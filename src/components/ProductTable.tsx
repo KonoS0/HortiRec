@@ -932,7 +932,7 @@ export default function ProductTable({
                             {p.quantity.toFixed(2)}
                             {p.boxes && p.boxes > 0 && (
                               <span style={{ display: 'block', fontSize: '10px', color: '#64748b', fontFamily: 'sans-serif', fontWeight: 'normal', marginTop: '1px' }}>
-                                {p.boxes} cx
+                                {p.boxes} cx (Tara: -{(p.boxes * 1.75).toFixed(2)}kg)
                               </span>
                             )}
                           </td>

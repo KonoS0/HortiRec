@@ -30,14 +30,18 @@ export default function App() {
           loadedList = Object.values(parsed).map((item: any) => ({
             name: item.name,
             type: item.type,
-            quantity: item.quantity,
+            quantity: Number(Number(item.quantity || 0).toFixed(2)),
             classification: item.classification || '',
             boxes: item.boxes || undefined,
-            originalWeight: item.originalWeight || undefined,
+            originalWeight: item.originalWeight ? Number(Number(item.originalWeight).toFixed(2)) : undefined,
             timestamp: item.timestamp || Date.now(),
           }));
         } else if (Array.isArray(parsed)) {
-          loadedList = parsed;
+          loadedList = parsed.map((item: any) => ({
+            ...item,
+            quantity: Number(Number(item.quantity || 0).toFixed(2)),
+            originalWeight: item.originalWeight ? Number(Number(item.originalWeight).toFixed(2)) : undefined,
+          }));
         }
 
         loadedList.sort((a, b) => (b.quantity - a.quantity) || a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
@@ -59,10 +63,10 @@ export default function App() {
         dictionary[p.name] = {
           name: p.name,
           type: p.type,
-          quantity: p.quantity,
+          quantity: Number(Number(p.quantity).toFixed(2)),
           classification: p.classification || '',
           boxes: p.boxes,
-          originalWeight: p.originalWeight,
+          originalWeight: p.originalWeight ? Number(Number(p.originalWeight).toFixed(2)) : undefined,
         };
       });
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dictionary));
@@ -80,17 +84,22 @@ export default function App() {
     );
 
     if (existingIdx >= 0) {
-      // Accumulate quantities and update properties
+      // Accumulate quantities and update properties with strict 2 decimal places
+      const combinedQuantity = Number((updatedList[existingIdx].quantity + newProd.quantity).toFixed(2));
+      const combinedOriginalWeight = (updatedList[existingIdx].originalWeight || 0) + (newProd.originalWeight || 0);
+
       updatedList[existingIdx] = {
         ...updatedList[existingIdx],
-        quantity: updatedList[existingIdx].quantity + newProd.quantity,
+        quantity: combinedQuantity,
         boxes: (updatedList[existingIdx].boxes || 0) + (newProd.boxes || 0) || undefined,
-        originalWeight: (updatedList[existingIdx].originalWeight || 0) + (newProd.originalWeight || 0) || undefined,
+        originalWeight: combinedOriginalWeight ? Number(combinedOriginalWeight.toFixed(2)) : undefined,
       };
     } else {
-      // Add as a new entry
+      // Add as a new entry with strict 2 decimal places
       updatedList.push({
         ...newProd,
+        quantity: Number(Number(newProd.quantity).toFixed(2)),
+        originalWeight: newProd.originalWeight ? Number(Number(newProd.originalWeight).toFixed(2)) : undefined,
         timestamp: Date.now(),
       });
     }

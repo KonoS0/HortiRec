@@ -103,10 +103,29 @@ export default function ProductForm({ onAddProduct, onViewTable, registeredCount
     }
   };
 
-  // Calculation parameters
-  const weightDeduction = measureType === 'KG' ? boxes * WEIGHT_PER_BOX : 0;
-  const inputNum = parseFloat(totalQuantity) || 0;
-  const netWeight = Math.max(0, inputNum - weightDeduction);
+  // Calculation parameters with strict 2 decimal places precision
+  const weightDeduction = measureType === 'KG' ? Number((boxes * WEIGHT_PER_BOX).toFixed(2)) : 0;
+  const inputNum = totalQuantity ? parseFloat(totalQuantity) || 0 : 0;
+  const netWeight = Math.max(0, Number((inputNum - weightDeduction).toFixed(2)));
+
+  // Ensure input only accepts numbers with at most 2 decimal places to the right of the dot
+  const handleQuantityChange = (val: string) => {
+    // Replace comma with dot for brazilian keyboard compatibility
+    const formatted = val.replace(',', '.');
+
+    // Reject invalid characters or more than 2 decimal places
+    if (formatted === '' || /^\d+(\.\d{0,2})?$/.test(formatted) || /^\.\d{0,2}$/.test(formatted)) {
+      setTotalQuantity(formatted);
+      setErrorMsg(null);
+    }
+  };
+
+  const handleQuantityBlur = () => {
+    if (totalQuantity && !isNaN(parseFloat(totalQuantity))) {
+      const num = parseFloat(totalQuantity);
+      setTotalQuantity(num.toFixed(2));
+    }
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -125,12 +144,20 @@ export default function ProductForm({ onAddProduct, onViewTable, registeredCount
 
     setErrorMsg(null);
 
+    const finalQuantity = measureType === 'KG' 
+      ? Number(netWeight.toFixed(2)) 
+      : Number(quantityValue.toFixed(2));
+
+    const finalOriginalWeight = measureType === 'KG' && boxes > 0 
+      ? Number(quantityValue.toFixed(2)) 
+      : undefined;
+
     onAddProduct({
       name: productName.trim().toUpperCase(),
       type: measureType || 'UN',
-      quantity: measureType === 'KG' ? netWeight : quantityValue,
+      quantity: finalQuantity,
       boxes: measureType === 'KG' ? boxes : undefined,
-      originalWeight: measureType === 'KG' && boxes > 0 ? quantityValue : undefined,
+      originalWeight: finalOriginalWeight,
     });
 
     // Reset Form
@@ -262,12 +289,12 @@ export default function ProductForm({ onAddProduct, onViewTable, registeredCount
           </label>
           <div className="relative">
             <input
-              type="number"
-              step="0.01"
-              min="0.01"
+              type="text"
+              inputMode="decimal"
               value={totalQuantity}
-              onChange={(e) => setTotalQuantity(e.target.value)}
-              placeholder={measureType === 'KG' ? '0.00 kg' : '0'}
+              onChange={(e) => handleQuantityChange(e.target.value)}
+              onBlur={handleQuantityBlur}
+              placeholder={measureType === 'KG' ? '0.00 kg' : '0.00'}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800 focus:border-slate-800 transition text-sm text-slate-800 font-sans"
               required
             />
