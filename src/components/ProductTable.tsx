@@ -105,10 +105,32 @@ export default function ProductTable({
 
   // Get barcode code for a product
   const getProductCode = (name: string): string => {
+    const cleanName = name.trim().toUpperCase();
     const match = PRODUCTS_DATABASE.find(
-      p => p.name.toUpperCase() === name.toUpperCase()
+      p => p.name.toUpperCase() === cleanName
     );
-    return match ? match.code : '0000000000000';
+    if (match) return match.code;
+
+    // Fallback: match without measure suffix (e.g. "TOMATE LONGA VIDA" or "MACA GALA")
+    const cleanNoSuffix = cleanName.replace(/\s+(KG|UN|BJ|CX|PT|SC|DZ|GF|PO)$/, '');
+    const matchWithoutSuffix = PRODUCTS_DATABASE.find(p => {
+      const pClean = p.name.toUpperCase().replace(/\s+(KG|UN|BJ|CX|PT|SC|DZ|GF|PO)$/, '');
+      return pClean === cleanNoSuffix;
+    });
+    if (matchWithoutSuffix) return matchWithoutSuffix.code;
+
+    // Special hortifruti aliases (all with the check digit included)
+    if (cleanName === 'MACA GALA' || cleanName === 'MACA GALA KG') return '0001912';
+    if (cleanName === 'TOMATE LONGA VIDA' || cleanName === 'TOMATE LONGA VIDA KG') return '0064248';
+    if (cleanName === 'TOMATE CAQUI' || cleanName === 'TOMATE CAQUI KG') return '0270652';
+    if (cleanName === 'BATATA ASTERIX' || cleanName === 'BATATA ASTERIX KG') return '0079148';
+    if (cleanName === 'BATATA BAROA' || cleanName === 'BATATA BAROA KG') return '0380683';
+    if (cleanName === 'CASTANHA CAJU' || cleanName === 'CASTANHA CAJU KG') return '0269957';
+    if (cleanName === 'MEXERICA MURCOTE' || cleanName === 'MEXERICA MURCOTE KG') return '0056106';
+    if (cleanName === 'TAIOBA' || cleanName === 'TAIOBA L.ARAUJO UN') return '1318975';
+    if (cleanName === 'ALFACE' || cleanName === 'ALFACE L.ARAUJO UN') return '1318715';
+
+    return '0000000';
   };
 
   const [sortBy, setSortBy] = useState<'quantity' | 'name'>('quantity');
@@ -122,9 +144,11 @@ export default function ProductTable({
       // Search query filter (matches name or barcode code)
       if (searchQuery.trim()) {
         const query = searchQuery.trim().toLowerCase();
+        const queryNoHyphen = query.replace(/-/g, '');
         const code = getProductCode(p.name).toLowerCase();
+        const codeNoHyphen = code.replace(/-/g, '');
         const matchesName = p.name.toLowerCase().includes(query);
-        const matchesCode = code.includes(query);
+        const matchesCode = code.includes(query) || (queryNoHyphen.length >= 2 && codeNoHyphen.includes(queryNoHyphen));
         if (!matchesName && !matchesCode) return false;
       }
 

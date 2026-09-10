@@ -53,16 +53,58 @@ export default function ProductForm({ onAddProduct, onViewTable, registeredCount
       return;
     }
 
-    const searchStr = val.toLowerCase();
-    const filtered = PRODUCTS_DATABASE.filter(p => 
-      p.name.toLowerCase().includes(searchStr)
-    ).slice(0, 10); // Limit to 10 suggestions for better performance
+    const searchStr = val.toLowerCase().trim();
+    const cleanSearch = searchStr.replace(/\s+(kg|un|bj|cx|pt|sc|dz|gf|po)$/i, '');
+    const searchNoHyphen = searchStr.replace(/-/g, '');
+
+    const filtered = PRODUCTS_DATABASE.filter(p => {
+      const pName = p.name.toLowerCase();
+      const pCode = p.code.toLowerCase();
+      const pCodeNoHyphen = pCode.replace(/-/g, '');
+      return (
+        pName.includes(searchStr) || 
+        pCode.includes(searchStr) ||
+        (searchNoHyphen.length >= 2 && pCodeNoHyphen.includes(searchNoHyphen))
+      );
+    }).sort((a, b) => {
+      const aName = a.name.toLowerCase();
+      const bName = b.name.toLowerCase();
+
+      // Exact match first
+      if (aName === searchStr) return -1;
+      if (bName === searchStr) return 1;
+
+      // Starts with search string first
+      const aStarts = aName.startsWith(searchStr);
+      const bStarts = bName.startsWith(searchStr);
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+
+      // Shorter name first (e.g. "MACA GALA KG" before "MACA GALA CAT-1...")
+      if (Math.abs(aName.length - bName.length) > 3) {
+        return aName.length - bName.length;
+      }
+
+      return aName.localeCompare(bName, 'pt-BR');
+    }).slice(0, 30); // Expanded limit so items like TOMATE LONGA VIDA KG appear
 
     setSuggestions(filtered);
     setIsDropdownOpen(filtered.length > 0);
 
-    // If there's an exact match, select its measure type
-    const exactMatch = PRODUCTS_DATABASE.find(p => p.name.toLowerCase() === searchStr);
+    // Auto-detect measure type if exact match or match without measure suffix
+    const exactMatch = PRODUCTS_DATABASE.find(p => {
+      const pName = p.name.toLowerCase();
+      const pClean = pName.replace(/\s+(kg|un|bj|cx|pt|sc|dz|gf|po)$/i, '');
+      const pCode = p.code.toLowerCase();
+      const pCodeNoHyphen = pCode.replace(/-/g, '');
+      return (
+        pName === searchStr || 
+        pClean === cleanSearch || 
+        pCode === searchStr || 
+        (searchNoHyphen.length >= 4 && pCodeNoHyphen === searchNoHyphen)
+      );
+    });
+
     if (exactMatch) {
       setMeasureType(exactMatch.type);
     } else {
@@ -152,11 +194,30 @@ export default function ProductForm({ onAddProduct, onViewTable, registeredCount
       ? Number(quantityValue.toFixed(2)) 
       : undefined;
 
+    // Check for matching product to ensure canonical name and measure type
+    const searchClean = productName.trim().toLowerCase();
+    const cleanNoSuffix = searchClean.replace(/\s+(kg|un|bj|cx|pt|sc|dz|gf|po)$/i, '');
+    const cleanNoHyphen = searchClean.replace(/-/g, '');
+    const matched = PRODUCTS_DATABASE.find(p => {
+      const pClean = p.name.toLowerCase().replace(/\s+(kg|un|bj|cx|pt|sc|dz|gf|po)$/i, '');
+      const pCode = p.code.toLowerCase();
+      const pCodeNoHyphen = pCode.replace(/-/g, '');
+      return (
+        p.name.toLowerCase() === searchClean || 
+        pClean === cleanNoSuffix || 
+        pCode === searchClean ||
+        (cleanNoHyphen.length >= 4 && pCodeNoHyphen === cleanNoHyphen)
+      );
+    });
+
+    const finalName = matched ? matched.name : productName.trim().toUpperCase();
+    const finalType = matched ? matched.type : (measureType || 'UN');
+
     onAddProduct({
-      name: productName.trim().toUpperCase(),
-      type: measureType || 'UN',
+      name: finalName,
+      type: finalType,
       quantity: finalQuantity,
-      boxes: measureType === 'KG' ? boxes : undefined,
+      boxes: finalType === 'KG' ? boxes : undefined,
       originalWeight: finalOriginalWeight,
     });
 
@@ -221,17 +282,22 @@ export default function ProductForm({ onAddProduct, onViewTable, registeredCount
             <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl shadow-slate-200/50 divide-y divide-slate-50">
               {suggestions.map((p, idx) => (
                 <div
-                  key={p.code}
+                  key={`${p.code}-${p.name}`}
                   onClick={() => selectProduct(p.name, p.type)}
                   onMouseEnter={() => setFocusedSuggestionIndex(idx)}
-                  className={`px-4 py-3 cursor-pointer text-xs font-sans flex items-center justify-between transition ${
+                  className={`px-4 py-2.5 cursor-pointer text-xs font-sans flex items-center justify-between transition ${
                     idx === focusedSuggestionIndex 
-                      ? 'bg-slate-50 text-slate-900 font-medium' 
-                      : 'text-slate-600'
+                      ? 'bg-slate-100 text-slate-900 font-medium' 
+                      : 'text-slate-700 hover:bg-slate-50'
                   }`}
                 >
-                  <span className="truncate">{p.name}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold font-mono bg-slate-100 text-slate-600">
+                  <div className="flex items-center gap-2 truncate pr-2">
+                    <span className="font-mono text-[11px] text-slate-400 font-medium shrink-0">
+                      {p.code}
+                    </span>
+                    <span className="truncate">{p.name}</span>
+                  </div>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold font-mono bg-slate-100 text-slate-600 shrink-0">
                     {p.type}
                   </span>
                 </div>
