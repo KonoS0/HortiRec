@@ -119,16 +119,16 @@ export default function ProductTable({
     });
     if (matchWithoutSuffix) return matchWithoutSuffix.code;
 
-    // Special hortifruti aliases (all with the check digit included)
-    if (cleanName === 'MACA GALA' || cleanName === 'MACA GALA KG') return '0001912';
-    if (cleanName === 'TOMATE LONGA VIDA' || cleanName === 'TOMATE LONGA VIDA KG') return '0064248';
-    if (cleanName === 'TOMATE CAQUI' || cleanName === 'TOMATE CAQUI KG') return '0270652';
-    if (cleanName === 'BATATA ASTERIX' || cleanName === 'BATATA ASTERIX KG') return '0079148';
-    if (cleanName === 'BATATA BAROA' || cleanName === 'BATATA BAROA KG') return '0380683';
-    if (cleanName === 'CASTANHA CAJU' || cleanName === 'CASTANHA CAJU KG') return '0269957';
-    if (cleanName === 'MEXERICA MURCOTE' || cleanName === 'MEXERICA MURCOTE KG') return '0056106';
-    if (cleanName === 'TAIOBA' || cleanName === 'TAIOBA L.ARAUJO UN') return '1318975';
-    if (cleanName === 'ALFACE' || cleanName === 'ALFACE L.ARAUJO UN') return '1318715';
+    // Special hortifruti aliases (all with the check digit included from official PDF)
+    if (cleanName === 'MACA GALA' || cleanName === 'MACA GALA KG') return '000191-5';
+    if (cleanName === 'TOMATE LONGA VIDA' || cleanName === 'TOMATE LONGA VIDA KG') return '006424-8';
+    if (cleanName === 'TOMATE CAQUI' || cleanName === 'TOMATE CAQUI KG') return '027062-5';
+    if (cleanName === 'BATATA ASTERIX' || cleanName === 'BATATA ASTERIX KG') return '007914-3';
+    if (cleanName === 'BATATA BAROA' || cleanName === 'BATATA BAROA KG') return '380683-8';
+    if (cleanName === 'CASTANHA CAJU' || cleanName === 'CASTANHA CAJU KG') return '026995-7';
+    if (cleanName === 'MEXERICA MURCOTE' || cleanName === 'MEXERICA MURCOTE KG') return '005610-6';
+    if (cleanName === 'TAIOBA' || cleanName === 'TAIOBA L.ARAUJO UN') return '131897-5';
+    if (cleanName === 'ALFACE' || cleanName === 'ALFACE L.ARAUJO UN') return '131871-5';
 
     return '0000000';
   };
