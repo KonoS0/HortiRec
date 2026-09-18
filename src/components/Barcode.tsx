@@ -38,12 +38,16 @@ export default function Barcode({
     if (!value) return '';
 
     try {
+      // Ensure barcode value never contains hyphens
+      const cleanValue = value.replace(/-/g, '');
+      if (!cleanValue) return '';
+
       // 1. Encode value in Code 128 Set B
       const codes: number[] = [104]; // Start B
       let sum = 104;
 
-      for (let i = 0; i < value.length; i++) {
-        let code = value.charCodeAt(i) - 32;
+      for (let i = 0; i < cleanValue.length; i++) {
+        let code = cleanValue.charCodeAt(i) - 32;
         if (code < 0 || code > 95) {
           code = 0; // fallback to space
         }
@@ -118,7 +122,7 @@ export default function Barcode({
           font-weight="bold"
           text-anchor="middle"
         >
-          ${value}
+          ${cleanValue}
         </text>
       ` : '';
 

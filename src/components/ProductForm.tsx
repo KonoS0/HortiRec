@@ -293,7 +293,7 @@ export default function ProductForm({ onAddProduct, onViewTable, registeredCount
                 >
                   <div className="flex items-center gap-2 truncate pr-2">
                     <span className="font-mono text-[11px] text-slate-400 font-medium shrink-0">
-                      {p.code}
+                      {p.code.replace(/-/g, '')}
                     </span>
                     <span className="truncate">{p.name}</span>
                   </div>

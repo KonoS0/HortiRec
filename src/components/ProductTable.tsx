@@ -109,7 +109,7 @@ export default function ProductTable({
     const match = PRODUCTS_DATABASE.find(
       p => p.name.toUpperCase() === cleanName
     );
-    if (match) return match.code;
+    if (match) return match.code.replace(/-/g, '');
 
     // Fallback: match without measure suffix (e.g. "TOMATE LONGA VIDA" or "MACA GALA")
     const cleanNoSuffix = cleanName.replace(/\s+(KG|UN|BJ|CX|PT|SC|DZ|GF|PO)$/, '');
@@ -117,18 +117,18 @@ export default function ProductTable({
       const pClean = p.name.toUpperCase().replace(/\s+(KG|UN|BJ|CX|PT|SC|DZ|GF|PO)$/, '');
       return pClean === cleanNoSuffix;
     });
-    if (matchWithoutSuffix) return matchWithoutSuffix.code;
+    if (matchWithoutSuffix) return matchWithoutSuffix.code.replace(/-/g, '');
 
-    // Special hortifruti aliases (all with the check digit included from official PDF)
-    if (cleanName === 'MACA GALA' || cleanName === 'MACA GALA KG') return '000191-5';
-    if (cleanName === 'TOMATE LONGA VIDA' || cleanName === 'TOMATE LONGA VIDA KG') return '006424-8';
-    if (cleanName === 'TOMATE CAQUI' || cleanName === 'TOMATE CAQUI KG') return '027062-5';
-    if (cleanName === 'BATATA ASTERIX' || cleanName === 'BATATA ASTERIX KG') return '007914-3';
-    if (cleanName === 'BATATA BAROA' || cleanName === 'BATATA BAROA KG') return '380683-8';
-    if (cleanName === 'CASTANHA CAJU' || cleanName === 'CASTANHA CAJU KG') return '026995-7';
-    if (cleanName === 'MEXERICA MURCOTE' || cleanName === 'MEXERICA MURCOTE KG') return '005610-6';
-    if (cleanName === 'TAIOBA' || cleanName === 'TAIOBA L.ARAUJO UN') return '131897-5';
-    if (cleanName === 'ALFACE' || cleanName === 'ALFACE L.ARAUJO UN') return '131871-5';
+    // Special hortifruti aliases (all with the check digit included, no hyphen)
+    if (cleanName === 'MACA GALA' || cleanName === 'MACA GALA KG') return '0001915';
+    if (cleanName === 'TOMATE LONGA VIDA' || cleanName === 'TOMATE LONGA VIDA KG') return '0064248';
+    if (cleanName === 'TOMATE CAQUI' || cleanName === 'TOMATE CAQUI KG') return '0270625';
+    if (cleanName === 'BATATA ASTERIX' || cleanName === 'BATATA ASTERIX KG') return '0079143';
+    if (cleanName === 'BATATA BAROA' || cleanName === 'BATATA BAROA KG') return '3806838';
+    if (cleanName === 'CASTANHA CAJU' || cleanName === 'CASTANHA CAJU KG') return '0269957';
+    if (cleanName === 'MEXERICA MURCOTE' || cleanName === 'MEXERICA MURCOTE KG') return '0056106';
+    if (cleanName === 'TAIOBA' || cleanName === 'TAIOBA L.ARAUJO UN') return '1318975';
+    if (cleanName === 'ALFACE' || cleanName === 'ALFACE L.ARAUJO UN') return '1318715';
 
     return '0000000';
   };
