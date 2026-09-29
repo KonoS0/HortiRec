@@ -4,19 +4,28 @@
  */
 
 import { useState, useRef, useEffect, KeyboardEvent, FormEvent } from 'react';
-import { Plus, Table, AlertCircle, Sparkles, Scale, Info, Check, PackageOpen } from 'lucide-react';
+import { Plus, Table, AlertCircle, Sparkles, Scale, Info, Check, PackageOpen, CalendarDays } from 'lucide-react';
 import { PRODUCTS_DATABASE } from '../productsData';
 import { RegisteredProduct } from '../types';
 
 interface ProductFormProps {
-  onAddProduct: (product: Omit<RegisteredProduct, 'timestamp'>) => void;
+  onAddProduct: (
+    product: Omit<RegisteredProduct, 'timestamp'>,
+    launchMeta?: { inputQuantity: number; tareWeight?: number }
+  ) => void;
   onViewTable: () => void;
+  onViewPeriodsHistory?: () => void;
   registeredCount: number;
 }
 
 const WEIGHT_PER_BOX = 1.75;
 
-export default function ProductForm({ onAddProduct, onViewTable, registeredCount }: ProductFormProps) {
+export default function ProductForm({
+  onAddProduct,
+  onViewTable,
+  onViewPeriodsHistory,
+  registeredCount,
+}: ProductFormProps) {
   const [productName, setProductName] = useState('');
   const [measureType, setMeasureType] = useState('');
   const [boxes, setBoxes] = useState(0);
@@ -205,7 +214,7 @@ export default function ProductForm({ onAddProduct, onViewTable, registeredCount
       return (
         p.name.toLowerCase() === searchClean || 
         pClean === cleanNoSuffix || 
-        pCode === searchClean ||
+        pCode === searchClean || 
         (cleanNoHyphen.length >= 4 && pCodeNoHyphen === cleanNoHyphen)
       );
     });
@@ -213,13 +222,19 @@ export default function ProductForm({ onAddProduct, onViewTable, registeredCount
     const finalName = matched ? matched.name : productName.trim().toUpperCase();
     const finalType = matched ? matched.type : (measureType || 'UN');
 
-    onAddProduct({
-      name: finalName,
-      type: finalType,
-      quantity: finalQuantity,
-      boxes: finalType === 'KG' ? boxes : undefined,
-      originalWeight: finalOriginalWeight,
-    });
+    onAddProduct(
+      {
+        name: finalName,
+        type: finalType,
+        quantity: finalQuantity,
+        boxes: finalType === 'KG' ? boxes : undefined,
+        originalWeight: finalOriginalWeight,
+      },
+      {
+        inputQuantity: quantityValue,
+        tareWeight: weightDeduction,
+      }
+    );
 
     // Reset Form
     setProductName('');
@@ -414,6 +429,17 @@ export default function ProductForm({ onAddProduct, onViewTable, registeredCount
               </span>
             )}
           </button>
+
+          {onViewPeriodsHistory && (
+            <button
+              type="button"
+              onClick={onViewPeriodsHistory}
+              className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 font-medium text-xs rounded-xl transition duration-150 cursor-pointer"
+            >
+              <CalendarDays className="h-3.5 w-3.5 text-slate-500" />
+              Consultar Lançamentos & Períodos
+            </button>
+          )}
         </div>
       </form>
     </div>

@@ -26,6 +26,7 @@ import {
   ArrowDown01,
   ArrowUp10,
   Filter,
+  CalendarDays,
 } from 'lucide-react';
 import { RegisteredProduct } from '../types';
 import { PRODUCTS_DATABASE } from '../productsData';
@@ -37,6 +38,8 @@ import JsBarcode from 'jsbarcode';
 interface ProductTableProps {
   products: RegisteredProduct[];
   onBack: () => void;
+  onViewPeriodsHistory?: () => void;
+  tableCreatedAt?: number | null;
   onDeleteProducts: (names: string[]) => void;
   onClearAll: () => void;
   onToggleClassification: (name: string, classification: 'NT' | 'QB') => void;
@@ -45,6 +48,8 @@ interface ProductTableProps {
 export default function ProductTable({
   products,
   onBack,
+  onViewPeriodsHistory,
+  tableCreatedAt,
   onDeleteProducts,
   onClearAll,
   onToggleClassification,
@@ -379,7 +384,10 @@ export default function ProductTable({
     }
   };
 
-  const formattedDate = new Date().toLocaleDateString('pt-BR', {
+  // Fixed date from session creation: if table is not deleted, the date is preserved!
+  const targetDate = tableCreatedAt && products.length > 0 ? new Date(tableCreatedAt) : new Date();
+
+  const formattedDate = targetDate.toLocaleDateString('pt-BR', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -393,19 +401,33 @@ export default function ProductTable({
       {/* Header and Back navigation */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-6 mb-6">
         <div>
-          <button
-            onClick={onBack}
-            className="group inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors mb-2 cursor-pointer"
-          >
-            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-            Voltar para o Registro
-          </button>
+          <div className="flex items-center gap-3 mb-2">
+            <button
+              onClick={onBack}
+              className="group inline-flex items-center gap-2 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+              Voltar para o Registro
+            </button>
+            {onViewPeriodsHistory && (
+              <>
+                <span className="text-slate-300">•</span>
+                <button
+                  onClick={onViewPeriodsHistory}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+                >
+                  <CalendarDays className="h-3.5 w-3.5 text-slate-500" />
+                  Ver Histórico por Período
+                </button>
+              </>
+            )}
+          </div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight font-sans">
             Produtos Registrados
           </h2>
         </div>
 
-        {/* Date visual pill */}
+        {/* Date visual pill (locked to session creation date) */}
         <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/60 px-4 py-2 rounded-xl text-slate-700 text-xs font-medium max-w-fit">
           <Calendar className="h-4 w-4 text-slate-500" />
           <span className="capitalize font-sans">{formattedDate}</span>
@@ -919,9 +941,9 @@ export default function ProductTable({
                       <p style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', marginBottom: 0 }}>Sistema de Controle de Peso Líquido e Recebimento</p>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', display: 'block' }}>Data de Emissão:</span>
+                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', display: 'block' }}>Data do Registro:</span>
                       <span style={{ fontSize: '12px', fontFamily: 'monospace', color: '#0f172a', fontWeight: 'bold' }}>
-                        {new Date().toLocaleDateString('pt-BR', {
+                        {targetDate.toLocaleDateString('pt-BR', {
                           day: '2-digit',
                           month: '2-digit',
                           year: 'numeric',

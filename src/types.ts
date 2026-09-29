@@ -18,3 +18,15 @@ export interface RegisteredProduct {
   originalWeight?: number;
   timestamp: number;
 }
+
+export interface ProductLaunchEntry {
+  id: string;
+  productName: string;
+  type: string;
+  inputQuantity: number;
+  boxes?: number;
+  tareWeight?: number;
+  netQuantity: number;
+  classification?: 'NT' | 'QB' | '';
+  timestamp: number;
+}
