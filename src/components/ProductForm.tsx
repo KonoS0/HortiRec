@@ -4,19 +4,27 @@
  */
 
 import { useState, useRef, useEffect, KeyboardEvent, FormEvent } from 'react';
-import { Plus, Table, AlertCircle, Sparkles, Scale, Info, Check, PackageOpen } from 'lucide-react';
+import { Plus, Table, AlertCircle, Sparkles, Scale, Info, Check, PackageOpen, History } from 'lucide-react';
 import { PRODUCTS_DATABASE } from '../productsData';
 import { RegisteredProduct } from '../types';
 
 interface ProductFormProps {
   onAddProduct: (product: Omit<RegisteredProduct, 'timestamp'>) => void;
   onViewTable: () => void;
+  onViewHistory: () => void;
   registeredCount: number;
+  launchesCount: number;
 }
 
 const WEIGHT_PER_BOX = 1.75;
 
-export default function ProductForm({ onAddProduct, onViewTable, registeredCount }: ProductFormProps) {
+export default function ProductForm({
+  onAddProduct,
+  onViewTable,
+  onViewHistory,
+  registeredCount,
+  launchesCount,
+}: ProductFormProps) {
   const [productName, setProductName] = useState('');
   const [measureType, setMeasureType] = useState('');
   const [boxes, setBoxes] = useState(0);
@@ -407,10 +415,24 @@ export default function ProductForm({ onAddProduct, onViewTable, registeredCount
             className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 font-semibold text-sm rounded-xl transition duration-150 cursor-pointer"
           >
             <Table className="h-4 w-4 text-slate-500" />
-            Ver Tabela de Produtos
+            Visualizar Tabela de Produtos
             {registeredCount > 0 && (
               <span className="inline-flex items-center justify-center ml-1.5 px-2 py-0.5 text-[10px] font-mono font-bold bg-slate-950 text-white rounded-full">
                 {registeredCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={onViewHistory}
+            className="w-full flex items-center justify-center gap-2 px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 font-semibold text-xs rounded-xl transition duration-150 cursor-pointer shadow-2xs"
+          >
+            <History className="h-4 w-4 text-slate-400" />
+            Histórico de Lançamentos Detalhado
+            {launchesCount > 0 && (
+              <span className="inline-flex items-center justify-center ml-1.5 px-2 py-0.5 text-[10px] font-mono font-bold bg-slate-100 text-slate-700 rounded-full border border-slate-200">
+                {launchesCount}
               </span>
             )}
           </button>

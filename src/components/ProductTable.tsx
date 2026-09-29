@@ -26,9 +26,11 @@ import {
   ArrowDown01,
   ArrowUp10,
   Filter,
+  History,
+  Clock,
 } from 'lucide-react';
-import { RegisteredProduct } from '../types';
-import { PRODUCTS_DATABASE } from '../productsData';
+import { RegisteredProduct, LaunchRecord } from '../types';
+import { PRODUCTS_DATABASE, getProductCode } from '../productsData';
 import Barcode from './Barcode';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -36,7 +38,10 @@ import JsBarcode from 'jsbarcode';
 
 interface ProductTableProps {
   products: RegisteredProduct[];
+  launches: LaunchRecord[];
   onBack: () => void;
+  onViewHistory: (productName?: string) => void;
+  onDeleteLaunch: (id: string) => void;
   onDeleteProducts: (names: string[]) => void;
   onClearAll: () => void;
   onToggleClassification: (name: string, classification: 'NT' | 'QB') => void;
@@ -44,13 +49,17 @@ interface ProductTableProps {
 
 export default function ProductTable({
   products,
+  launches,
   onBack,
+  onViewHistory,
+  onDeleteLaunch,
   onDeleteProducts,
   onClearAll,
   onToggleClassification,
 }: ProductTableProps) {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState(false);
+  const [historyModalProduct, setHistoryModalProduct] = useState<string | null>(null);
   const selectAllId = useId();
 
   // Custom beautiful confirm modal state
@@ -101,36 +110,6 @@ export default function ProductTable({
     setTimeout(() => {
       setToastMessage(null);
     }, 4000);
-  };
-
-  // Get barcode code for a product
-  const getProductCode = (name: string): string => {
-    const cleanName = name.trim().toUpperCase();
-    const match = PRODUCTS_DATABASE.find(
-      p => p.name.toUpperCase() === cleanName
-    );
-    if (match) return match.code.replace(/-/g, '');
-
-    // Fallback: match without measure suffix (e.g. "TOMATE LONGA VIDA" or "MACA GALA")
-    const cleanNoSuffix = cleanName.replace(/\s+(KG|UN|BJ|CX|PT|SC|DZ|GF|PO)$/, '');
-    const matchWithoutSuffix = PRODUCTS_DATABASE.find(p => {
-      const pClean = p.name.toUpperCase().replace(/\s+(KG|UN|BJ|CX|PT|SC|DZ|GF|PO)$/, '');
-      return pClean === cleanNoSuffix;
-    });
-    if (matchWithoutSuffix) return matchWithoutSuffix.code.replace(/-/g, '');
-
-    // Special hortifruti aliases (all with the check digit included, no hyphen)
-    if (cleanName === 'MACA GALA' || cleanName === 'MACA GALA KG') return '0001915';
-    if (cleanName === 'TOMATE LONGA VIDA' || cleanName === 'TOMATE LONGA VIDA KG') return '0064248';
-    if (cleanName === 'TOMATE CAQUI' || cleanName === 'TOMATE CAQUI KG') return '0270625';
-    if (cleanName === 'BATATA ASTERIX' || cleanName === 'BATATA ASTERIX KG') return '0079143';
-    if (cleanName === 'BATATA BAROA' || cleanName === 'BATATA BAROA KG') return '3806838';
-    if (cleanName === 'CASTANHA CAJU' || cleanName === 'CASTANHA CAJU KG') return '0269957';
-    if (cleanName === 'MEXERICA MURCOTE' || cleanName === 'MEXERICA MURCOTE KG') return '0056106';
-    if (cleanName === 'TAIOBA' || cleanName === 'TAIOBA L.ARAUJO UN') return '1318975';
-    if (cleanName === 'ALFACE' || cleanName === 'ALFACE L.ARAUJO UN') return '1318715';
-
-    return '0000000';
   };
 
   const [sortBy, setSortBy] = useState<'quantity' | 'name'>('quantity');
@@ -400,15 +379,36 @@ export default function ProductTable({
             <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
             Voltar para o Registro
           </button>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight font-sans">
-            Produtos Registrados
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight font-sans">
+              Produtos Registrados (Cumulativo)
+            </h2>
+            <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold font-mono">
+              {products.length} {products.length === 1 ? 'item' : 'itens'}
+            </span>
+          </div>
         </div>
 
-        {/* Date visual pill */}
-        <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/60 px-4 py-2 rounded-xl text-slate-700 text-xs font-medium max-w-fit">
-          <Calendar className="h-4 w-4 text-slate-500" />
-          <span className="capitalize font-sans">{formattedDate}</span>
+        {/* Action pills: Histórico and Date */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => onViewHistory()}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-all shadow-xs cursor-pointer"
+            title="Ver histórico de cada produto lançado separadamente"
+          >
+            <History className="h-4 w-4 text-slate-300" />
+            <span>Histórico de Lançamentos</span>
+            {launches.length > 0 && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-white/20 text-white">
+                {launches.length}
+              </span>
+            )}
+          </button>
+
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200/60 px-3.5 py-2 rounded-xl text-slate-700 text-xs font-medium">
+            <Calendar className="h-3.5 w-3.5 text-slate-500" />
+            <span className="capitalize font-sans">{formattedDate}</span>
+          </div>
         </div>
       </div>
 
@@ -663,9 +663,28 @@ export default function ProductTable({
                           {/* Name & Generated Barcode column */}
                           <td className="px-4 py-4 min-w-[220px]">
                             <div className="flex flex-col gap-2">
-                              <span className="font-semibold text-slate-800 text-sm font-sans tracking-tight">
-                                {product.name}
-                              </span>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-slate-800 text-sm font-sans tracking-tight">
+                                  {product.name}
+                                </span>
+                                {(() => {
+                                  const itemLaunches = launches.filter(l => l.productName === product.name);
+                                  if (itemLaunches.length > 0) {
+                                    return (
+                                      <button
+                                        type="button"
+                                        onClick={() => setHistoryModalProduct(product.name)}
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
+                                        title={`Clique para ver os ${itemLaunches.length} lançamentos individuais que compõem este produto`}
+                                      >
+                                        <Clock className="h-2.5 w-2.5 text-slate-500" />
+                                        <span>{itemLaunches.length} {itemLaunches.length === 1 ? 'lançamento' : 'lançamentos'}</span>
+                                      </button>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
                               <Barcode value={getProductCode(product.name)} />
                             </div>
                           </td>
@@ -752,9 +771,27 @@ export default function ProductTable({
                           <h4 className="font-bold text-slate-900 text-sm font-sans tracking-tight leading-snug break-all">
                             {product.name}
                           </h4>
-                          <span className="inline-flex items-center justify-center mt-1.5 px-2.5 py-0.5 text-[10px] font-bold font-mono bg-slate-100 text-slate-700 rounded-md">
-                            {product.type}
-                          </span>
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span className="inline-flex items-center justify-center px-2.5 py-0.5 text-[10px] font-bold font-mono bg-slate-100 text-slate-700 rounded-md">
+                              {product.type}
+                            </span>
+                            {(() => {
+                              const itemLaunches = launches.filter(l => l.productName === product.name);
+                              if (itemLaunches.length > 0) {
+                                return (
+                                  <button
+                                    type="button"
+                                    onClick={() => setHistoryModalProduct(product.name)}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 cursor-pointer"
+                                  >
+                                    <Clock className="h-2.5 w-2.5 text-slate-500" />
+                                    <span>{itemLaunches.length} {itemLaunches.length === 1 ? 'lançamento' : 'lançamentos'}</span>
+                                  </button>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
                         </div>
                       </div>
 
@@ -987,6 +1024,155 @@ export default function ProductTable({
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Product-Specific Launch History Modal */}
+      {historyModalProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 border border-slate-150 shadow-2xl flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[85vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-slate-100 text-slate-800 rounded-2xl">
+                  <Clock className="h-5 w-5 text-slate-700" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Histórico de Lançamentos do Item
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900 font-sans">
+                    {historyModalProduct}
+                  </h3>
+                </div>
+              </div>
+              <button
+                onClick={() => setHistoryModalProduct(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Product Summary */}
+            {(() => {
+              const currentProd = products.find(p => p.name === historyModalProduct);
+              const prodLaunches = launches.filter(l => l.productName === historyModalProduct);
+              const totalLaunchesQty = prodLaunches.reduce((sum, l) => sum + l.quantity, 0);
+
+              return (
+                <>
+                  <div className="bg-slate-50 rounded-2xl p-3.5 border border-slate-100 flex items-center justify-between text-xs">
+                    <div>
+                      <span className="text-slate-500 block">Total acumulado na tabela:</span>
+                      <strong className="text-base font-mono font-bold text-slate-900">
+                        {currentProd ? currentProd.quantity.toFixed(2) : totalLaunchesQty.toFixed(2)} {currentProd?.type || ''}
+                      </strong>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-slate-500 block">Total de pesagens:</span>
+                      <span className="font-bold text-slate-800 font-mono text-xs">
+                        {prodLaunches.length} {prodLaunches.length === 1 ? 'registro' : 'registros'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Launches List */}
+                  <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 max-h-[360px]">
+                    {prodLaunches.length === 0 ? (
+                      <div className="text-center py-8 text-slate-400 text-xs">
+                        Nenhum lançamento individual registrado neste histórico para este produto.
+                      </div>
+                    ) : (
+                      prodLaunches.map((launch, idx) => {
+                        const d = new Date(launch.timestamp);
+                        const dateFormatted = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()} às ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+
+                        return (
+                          <div
+                            key={launch.id}
+                            className="p-3.5 rounded-xl border border-slate-100 bg-white hover:bg-slate-50/70 transition-colors flex items-center justify-between gap-3 shadow-2xs"
+                          >
+                            <div className="flex items-start gap-3">
+                              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 mt-0.5">
+                                #{idx + 1}º
+                              </span>
+                              <div className="space-y-0.5">
+                                <span className="text-xs font-semibold text-slate-800 block">
+                                  {dateFormatted}
+                                </span>
+                                {launch.boxes && launch.boxes > 0 ? (
+                                  <span className="text-[11px] text-slate-500 block">
+                                    Bruto: <strong>{launch.originalWeight?.toFixed(2)}kg</strong> • {launch.boxes} cx (-{(launch.boxes * 1.75).toFixed(2)}kg)
+                                  </span>
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 block">
+                                    Lançamento direto sem caixas
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <div className="text-right">
+                                <span className="text-sm font-bold font-mono text-emerald-600 block">
+                                  +{launch.quantity.toFixed(2)}
+                                </span>
+                                <span className="text-[10px] text-slate-400 uppercase font-mono">
+                                  {launch.type}
+                                </span>
+                              </div>
+
+                              <button
+                                onClick={() => {
+                                  showConfirm(
+                                    'Excluir Lançamento',
+                                    `Deseja excluir este lançamento de ${launch.quantity.toFixed(2)} ${launch.type}? A quantidade na tabela cumulativa será recalculada automaticamente.`,
+                                    'Excluir',
+                                    'danger',
+                                    () => {
+                                      onDeleteLaunch(launch.id);
+                                      showToast('Lançamento excluído e tabela recalculada!');
+                                    }
+                                  );
+                                }}
+                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                title="Excluir este lançamento específico"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  {/* Modal Footer Actions */}
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3">
+                    <button
+                      onClick={() => {
+                        const targetProduct = historyModalProduct;
+                        setHistoryModalProduct(null);
+                        onViewHistory(targetProduct);
+                      }}
+                      className="px-3.5 py-2 text-xs font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5"
+                    >
+                      <History className="h-3.5 w-3.5 text-slate-500" />
+                      <span>Ver no Extrato Completo</span>
+                    </button>
+
+                    <button
+                      onClick={() => setHistoryModalProduct(null)}
+                      className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+                    >
+                      Fechar
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}
