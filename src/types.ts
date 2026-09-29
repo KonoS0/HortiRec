@@ -17,17 +17,4 @@ export interface RegisteredProduct {
   boxes?: number;
   originalWeight?: number;
   timestamp: number;
-  launchCount?: number;
-}
-
-export interface LaunchRecord {
-  id: string;
-  timestamp: number;
-  productName: string;
-  productCode: string;
-  type: string;
-  quantity: number; // Net quantity in this launch
-  boxes?: number; // Boxes in this launch
-  originalWeight?: number; // Gross weight in this launch
-  tareWeight?: number; // boxes * 1.75
 }

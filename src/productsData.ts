@@ -534,32 +534,3 @@ export const PRODUCTS_DATABASE: ProductTemplate[] = [
   { code: "0410175", name: "VAGEM SAO JOSE 400G", type: "PT" },
   { code: "0001199", name: "VINAGRETE KG", type: "KG" },
 ];
-
-export function getProductCode(name: string): string {
-  const cleanName = name.trim().toUpperCase();
-  const match = PRODUCTS_DATABASE.find(
-    p => p.name.toUpperCase() === cleanName
-  );
-  if (match) return match.code.replace(/-/g, '');
-
-  // Fallback: match without measure suffix (e.g. "TOMATE LONGA VIDA" or "MACA GALA")
-  const cleanNoSuffix = cleanName.replace(/\s+(KG|UN|BJ|CX|PT|SC|DZ|GF|PO|SQ)$/, '');
-  const matchWithoutSuffix = PRODUCTS_DATABASE.find(p => {
-    const pClean = p.name.toUpperCase().replace(/\s+(KG|UN|BJ|CX|PT|SC|DZ|GF|PO|SQ)$/, '');
-    return pClean === cleanNoSuffix;
-  });
-  if (matchWithoutSuffix) return matchWithoutSuffix.code.replace(/-/g, '');
-
-  // Special hortifruti aliases (all without hyphen)
-  if (cleanName === 'MACA GALA' || cleanName === 'MACA GALA KG') return '0001915';
-  if (cleanName === 'TOMATE LONGA VIDA' || cleanName === 'TOMATE LONGA VIDA KG') return '0064248';
-  if (cleanName === 'TOMATE CAQUI' || cleanName === 'TOMATE CAQUI KG') return '0270625';
-  if (cleanName === 'BATATA ASTERIX' || cleanName === 'BATATA ASTERIX KG') return '0079143';
-  if (cleanName === 'BATATA BAROA' || cleanName === 'BATATA BAROA KG') return '3806838';
-  if (cleanName === 'CASTANHA CAJU' || cleanName === 'CASTANHA CAJU KG') return '0269957';
-  if (cleanName === 'MEXERICA MURCOTE' || cleanName === 'MEXERICA MURCOTE KG') return '0056106';
-  if (cleanName === 'TAIOBA' || cleanName === 'TAIOBA L.ARAUJO UN') return '1318975';
-  if (cleanName === 'ALFACE' || cleanName === 'ALFACE L.ARAUJO UN') return '1318715';
-
-  return '0000000';
-}
