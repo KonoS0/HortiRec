@@ -33,21 +33,52 @@ export default function App() {
         
         // Convert dictionary (from original HTML) to clean React list array
         if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-          loadedList = Object.values(parsed).map((item: any) => ({
-            name: item.name,
-            type: item.type,
-            quantity: Number(Number(item.quantity || 0).toFixed(2)),
-            classification: item.classification || '',
-            boxes: item.boxes || undefined,
-            originalWeight: item.originalWeight ? Number(Number(item.originalWeight).toFixed(2)) : undefined,
-            timestamp: item.timestamp || Date.now(),
-          }));
+          loadedList = Object.values(parsed).map((item: any) => {
+            const qty = Number(Number(item.quantity || 0).toFixed(2));
+            const qNT = item.quantityNT !== undefined ? Number(Number(item.quantityNT).toFixed(2)) : (item.classification === 'NT' ? qty : 0);
+            const qQB = item.quantityQB !== undefined ? Number(Number(item.quantityQB).toFixed(2)) : (item.classification === 'QB' ? qty : 0);
+            let classification: 'NT' | 'QB' | 'SPLIT' | '' = item.classification || '';
+            if (qNT > 0 && qQB > 0) {
+              classification = 'SPLIT';
+            } else if (qNT > 0 && qQB === 0) {
+              classification = 'NT';
+            } else if (qQB > 0 && qNT === 0) {
+              classification = 'QB';
+            }
+            return {
+              name: item.name,
+              type: item.type,
+              quantity: qty,
+              classification,
+              quantityNT: qNT,
+              quantityQB: qQB,
+              boxes: item.boxes || undefined,
+              originalWeight: item.originalWeight ? Number(Number(item.originalWeight).toFixed(2)) : undefined,
+              timestamp: item.timestamp || Date.now(),
+            };
+          });
         } else if (Array.isArray(parsed)) {
-          loadedList = parsed.map((item: any) => ({
-            ...item,
-            quantity: Number(Number(item.quantity || 0).toFixed(2)),
-            originalWeight: item.originalWeight ? Number(Number(item.originalWeight).toFixed(2)) : undefined,
-          }));
+          loadedList = parsed.map((item: any) => {
+            const qty = Number(Number(item.quantity || 0).toFixed(2));
+            const qNT = item.quantityNT !== undefined ? Number(Number(item.quantityNT).toFixed(2)) : (item.classification === 'NT' ? qty : 0);
+            const qQB = item.quantityQB !== undefined ? Number(Number(item.quantityQB).toFixed(2)) : (item.classification === 'QB' ? qty : 0);
+            let classification: 'NT' | 'QB' | 'SPLIT' | '' = item.classification || '';
+            if (qNT > 0 && qQB > 0) {
+              classification = 'SPLIT';
+            } else if (qNT > 0 && qQB === 0) {
+              classification = 'NT';
+            } else if (qQB > 0 && qNT === 0) {
+              classification = 'QB';
+            }
+            return {
+              ...item,
+              quantity: qty,
+              classification,
+              quantityNT: qNT,
+              quantityQB: qQB,
+              originalWeight: item.originalWeight ? Number(Number(item.originalWeight).toFixed(2)) : undefined,
+            };
+          });
         }
 
         loadedList.sort((a, b) => (b.quantity - a.quantity) || a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
@@ -108,6 +139,8 @@ export default function App() {
           type: p.type,
           quantity: Number(Number(p.quantity).toFixed(2)),
           classification: p.classification || '',
+          quantityNT: p.quantityNT !== undefined ? Number(Number(p.quantityNT).toFixed(2)) : undefined,
+          quantityQB: p.quantityQB !== undefined ? Number(Number(p.quantityQB).toFixed(2)) : undefined,
           boxes: p.boxes,
           originalWeight: p.originalWeight ? Number(Number(p.originalWeight).toFixed(2)) : undefined,
         };
@@ -230,14 +263,56 @@ export default function App() {
     saveHistoryList([]);
   };
 
-  // Toggle NT or QB classifications
-  const handleToggleClassification = (name: string, classification: 'NT' | 'QB') => {
+  // Toggle NT or QB classifications (100% or reset)
+  const handleToggleClassification = (name: string, targetClass: 'NT' | 'QB') => {
     const updatedList = products.map((p) => {
       if (p.name.toUpperCase() === name.toUpperCase()) {
-        const currentClass = p.classification;
+        const isAlreadyFull = p.classification === targetClass && (
+          (targetClass === 'NT' && (p.quantityNT === p.quantity || (!p.quantityNT && !p.quantityQB))) ||
+          (targetClass === 'QB' && (p.quantityQB === p.quantity || (!p.quantityNT && !p.quantityQB)))
+        );
+        if (isAlreadyFull) {
+          // Desmarcar tudo
+          return {
+            ...p,
+            classification: '' as const,
+            quantityNT: 0,
+            quantityQB: 0,
+          };
+        } else {
+          // Marcar 100% como targetClass
+          return {
+            ...p,
+            classification: targetClass,
+            quantityNT: targetClass === 'NT' ? p.quantity : 0,
+            quantityQB: targetClass === 'QB' ? p.quantity : 0,
+          };
+        }
+      }
+      return p;
+    });
+    saveProductsList(updatedList);
+  };
+
+  // Update split quantities between NT and QB
+  const handleUpdateClassificationSplit = (name: string, quantityNT: number, quantityQB: number) => {
+    const updatedList = products.map((p) => {
+      if (p.name.toUpperCase() === name.toUpperCase()) {
+        const cleanNT = Math.max(0, Number(Number(quantityNT || 0).toFixed(2)));
+        const cleanQB = Math.max(0, Number(Number(quantityQB || 0).toFixed(2)));
+        let classification: 'NT' | 'QB' | 'SPLIT' | '' = '';
+        if (cleanNT > 0 && cleanQB > 0) {
+          classification = 'SPLIT';
+        } else if (cleanNT > 0) {
+          classification = 'NT';
+        } else if (cleanQB > 0) {
+          classification = 'QB';
+        }
         return {
           ...p,
-          classification: currentClass === classification ? '' : classification,
+          quantityNT: cleanNT,
+          quantityQB: cleanQB,
+          classification,
         };
       }
       return p;
@@ -379,6 +454,7 @@ export default function App() {
                 onDeleteProducts={handleDeleteProducts}
                 onClearAll={handleClearAll}
                 onToggleClassification={handleToggleClassification}
+                onUpdateClassificationSplit={handleUpdateClassificationSplit}
               />
             </motion.div>
           )}

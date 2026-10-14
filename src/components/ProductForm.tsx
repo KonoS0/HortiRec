@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useEffect, KeyboardEvent, FormEvent } from 'react';
-import { Plus, Table, AlertCircle, Sparkles, Scale, Info, Check, PackageOpen, CalendarDays } from 'lucide-react';
+import { Plus, Table, AlertCircle, Sparkles, Scale, PackageOpen, CalendarDays } from 'lucide-react';
 import { PRODUCTS_DATABASE } from '../productsData';
 import { RegisteredProduct } from '../types';
 
@@ -53,85 +53,43 @@ export default function ProductForm({
   const handleNameChange = (val: string) => {
     setProductName(val);
     setFocusedSuggestionIndex(-1);
-    setErrorMsg(null); // Clear error when typing
+    setErrorMsg(null);
 
     if (!val.trim()) {
       setSuggestions([]);
       setIsDropdownOpen(false);
-      setMeasureType('');
       return;
     }
 
-    const searchStr = val.toLowerCase().trim();
-    const cleanSearch = searchStr.replace(/\s+(kg|un|bj|cx|pt|sc|dz|gf|po)$/i, '');
-    const searchNoHyphen = searchStr.replace(/-/g, '');
+    const search = val.trim().toLowerCase();
+    const searchNoHyphen = search.replace(/-/g, '');
 
     const filtered = PRODUCTS_DATABASE.filter(p => {
       const pName = p.name.toLowerCase();
       const pCode = p.code.toLowerCase();
       const pCodeNoHyphen = pCode.replace(/-/g, '');
+
       return (
-        pName.includes(searchStr) || 
-        pCode.includes(searchStr) ||
-        (searchNoHyphen.length >= 2 && pCodeNoHyphen.includes(searchNoHyphen))
+        pName.includes(search) || 
+        pCode.includes(search) ||
+        pCodeNoHyphen.includes(searchNoHyphen)
       );
-    }).sort((a, b) => {
-      const aName = a.name.toLowerCase();
-      const bName = b.name.toLowerCase();
-
-      // Exact match first
-      if (aName === searchStr) return -1;
-      if (bName === searchStr) return 1;
-
-      // Starts with search string first
-      const aStarts = aName.startsWith(searchStr);
-      const bStarts = bName.startsWith(searchStr);
-      if (aStarts && !bStarts) return -1;
-      if (!aStarts && bStarts) return 1;
-
-      // Shorter name first (e.g. "MACA GALA KG" before "MACA GALA CAT-1...")
-      if (Math.abs(aName.length - bName.length) > 3) {
-        return aName.length - bName.length;
-      }
-
-      return aName.localeCompare(bName, 'pt-BR');
-    }).slice(0, 30); // Expanded limit so items like TOMATE LONGA VIDA KG appear
+    }).slice(0, 8);
 
     setSuggestions(filtered);
     setIsDropdownOpen(filtered.length > 0);
-
-    // Auto-detect measure type if exact match or match without measure suffix
-    const exactMatch = PRODUCTS_DATABASE.find(p => {
-      const pName = p.name.toLowerCase();
-      const pClean = pName.replace(/\s+(kg|un|bj|cx|pt|sc|dz|gf|po)$/i, '');
-      const pCode = p.code.toLowerCase();
-      const pCodeNoHyphen = pCode.replace(/-/g, '');
-      return (
-        pName === searchStr || 
-        pClean === cleanSearch || 
-        pCode === searchStr || 
-        (searchNoHyphen.length >= 4 && pCodeNoHyphen === searchNoHyphen)
-      );
-    });
-
-    if (exactMatch) {
-      setMeasureType(exactMatch.type);
-    } else {
-      setMeasureType('');
-    }
   };
 
-  const selectProduct = (name: string, type: string) => {
-    setProductName(name);
-    setMeasureType(type);
+  const handleSelectProduct = (product: typeof PRODUCTS_DATABASE[0]) => {
+    setProductName(product.name);
+    setMeasureType(product.type);
     setIsDropdownOpen(false);
     setSuggestions([]);
     setErrorMsg(null);
   };
 
-  // Keyboard navigation for autocomplete
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (!isDropdownOpen) return;
+    if (!isDropdownOpen || suggestions.length === 0) return;
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -144,69 +102,54 @@ export default function ProductForm({
         prev > 0 ? prev - 1 : suggestions.length - 1
       );
     } else if (e.key === 'Enter') {
-      e.preventDefault();
       if (focusedSuggestionIndex >= 0 && focusedSuggestionIndex < suggestions.length) {
-        const selected = suggestions[focusedSuggestionIndex];
-        selectProduct(selected.name, selected.type);
+        e.preventDefault();
+        handleSelectProduct(suggestions[focusedSuggestionIndex]);
       }
     } else if (e.key === 'Escape') {
       setIsDropdownOpen(false);
     }
   };
 
-  // Calculation parameters with strict 2 decimal places precision
-  const weightDeduction = measureType === 'KG' ? Number((boxes * WEIGHT_PER_BOX).toFixed(2)) : 0;
-  const inputNum = totalQuantity ? parseFloat(totalQuantity) || 0 : 0;
-  const netWeight = Math.max(0, Number((inputNum - weightDeduction).toFixed(2)));
-
-  // Ensure input only accepts numbers with at most 2 decimal places to the right of the dot
-  const handleQuantityChange = (val: string) => {
-    // Replace comma with dot for brazilian keyboard compatibility
-    const formatted = val.replace(',', '.');
-
-    // Reject invalid characters or more than 2 decimal places
-    if (formatted === '' || /^\d+(\.\d{0,2})?$/.test(formatted) || /^\.\d{0,2}$/.test(formatted)) {
-      setTotalQuantity(formatted);
-      setErrorMsg(null);
-    }
-  };
-
-  const handleQuantityBlur = () => {
-    if (totalQuantity && !isNaN(parseFloat(totalQuantity))) {
-      const num = parseFloat(totalQuantity);
-      setTotalQuantity(num.toFixed(2));
-    }
-  };
+  // Pre-calculate effective net quantity
+  const inputNum = parseFloat(totalQuantity) || 0;
+  const weightDeduction = measureType === 'KG' ? boxes * WEIGHT_PER_BOX : 0;
+  const netWeight = Math.max(0, inputNum - weightDeduction);
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!productName.trim()) return;
+    setErrorMsg(null);
+
+    if (!productName.trim()) {
+      setErrorMsg('Por favor, digite o nome do produto ou selecione um na lista.');
+      return;
+    }
 
     const quantityValue = parseFloat(totalQuantity);
     if (isNaN(quantityValue) || quantityValue <= 0) {
-      setErrorMsg('Por favor, insira uma quantidade válida maior que zero!');
+      setErrorMsg('Por favor, informe uma quantidade válida maior que zero.');
       return;
     }
 
-    if (measureType === 'KG' && boxes > 0 && netWeight <= 0) {
-      setErrorMsg('O peso das caixas excede o peso total do produto! Verifique os valores.');
-      return;
+    let finalQuantity = quantityValue;
+    let finalOriginalWeight: number | undefined = undefined;
+
+    if (measureType === 'KG') {
+      finalOriginalWeight = quantityValue;
+      finalQuantity = netWeight;
+
+      if (finalQuantity <= 0) {
+        setErrorMsg('O peso líquido não pode ser menor ou igual a zero após o desconto da tara das caixas.');
+        return;
+      }
     }
 
-    setErrorMsg(null);
+    finalQuantity = Number(finalQuantity.toFixed(2));
 
-    const finalQuantity = measureType === 'KG' 
-      ? Number(netWeight.toFixed(2)) 
-      : Number(quantityValue.toFixed(2));
-
-    const finalOriginalWeight = measureType === 'KG' && boxes > 0 
-      ? Number(quantityValue.toFixed(2)) 
-      : undefined;
-
-    // Check for matching product to ensure canonical name and measure type
     const searchClean = productName.trim().toLowerCase();
     const cleanNoSuffix = searchClean.replace(/\s+(kg|un|bj|cx|pt|sc|dz|gf|po)$/i, '');
     const cleanNoHyphen = searchClean.replace(/-/g, '');
+
     const matched = PRODUCTS_DATABASE.find(p => {
       const pClean = p.name.toLowerCase().replace(/\s+(kg|un|bj|cx|pt|sc|dz|gf|po)$/i, '');
       const pCode = p.code.toLowerCase();
@@ -253,130 +196,133 @@ export default function ProductForm({
           Registro de Produtos
         </h1>
         <p className="text-xs text-slate-500 mt-1">
-          Hortifrúti & Controle de Peso Líquido
+          Informe os dados do produto e registre o peso ou unidades
         </p>
       </div>
 
-      {errorMsg && (
-        <div className="mb-5 p-4 bg-red-50 border border-red-200 text-red-700 rounded-2xl flex items-start gap-2.5 animate-in fade-in duration-150">
-          <AlertCircle className="h-4.5 w-4.5 shrink-0 mt-0.5 text-red-500" />
-          <div className="text-xs font-semibold font-sans leading-snug">{errorMsg}</div>
-        </div>
-      )}
-
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Product Name Autocomplete Field */}
-        <div className="relative" ref={dropdownRef}>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5 font-sans">
-            Nome do Produto
-          </label>
-          <div className="relative">
-            <input
-              type="text"
-              value={productName}
-              onChange={(e) => handleNameChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Digite para pesquisar..."
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800 focus:border-slate-800 transition text-sm text-slate-800 font-sans"
-              required
-              autoComplete="off"
-            />
-            {productName && (
-              <button
-                type="button"
-                onClick={() => handleNameChange('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs px-1.5 py-0.5 rounded bg-slate-50 border border-slate-200"
-              >
-                Limpar
-              </button>
-            )}
+        {errorMsg && (
+          <div className="p-3 bg-red-50/80 border border-red-200/80 rounded-xl flex items-center gap-2.5 text-xs text-red-700 animate-in fade-in">
+            <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+            <p className="font-medium">{errorMsg}</p>
           </div>
+        )}
 
-          {/* Autocomplete Dropdown List */}
+        {/* Product Search & Autocomplete */}
+        <div className="relative" ref={dropdownRef}>
+          <label className="text-xs font-semibold text-slate-700 font-sans block mb-1.5">
+            Nome do Produto ou Código
+          </label>
+          <input
+            type="text"
+            value={productName}
+            onChange={(e) => handleNameChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Ex: TOMATE ou 0001004"
+            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 focus:bg-white transition duration-150"
+            autoComplete="off"
+            required
+          />
+
+          {/* Autocomplete dropdown */}
           {isDropdownOpen && suggestions.length > 0 && (
-            <div className="absolute z-50 left-0 right-0 mt-1 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl shadow-slate-200/50 divide-y divide-slate-50">
-              {suggestions.map((p, idx) => (
-                <div
-                  key={`${p.code}-${p.name}`}
-                  onClick={() => selectProduct(p.name, p.type)}
-                  onMouseEnter={() => setFocusedSuggestionIndex(idx)}
-                  className={`px-4 py-2.5 cursor-pointer text-xs font-sans flex items-center justify-between transition ${
-                    idx === focusedSuggestionIndex 
-                      ? 'bg-slate-100 text-slate-900 font-medium' 
-                      : 'text-slate-700 hover:bg-slate-50'
+            <div className="absolute z-20 left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl max-h-56 overflow-y-auto divide-y divide-slate-100">
+              {suggestions.map((item, index) => (
+                <button
+                  type="button"
+                  key={`${item.code}-${index}`}
+                  onClick={() => handleSelectProduct(item)}
+                  className={`w-full px-4 py-2.5 text-left flex items-center justify-between text-xs transition duration-150 cursor-pointer ${
+                    index === focusedSuggestionIndex ? 'bg-slate-100 text-slate-900 font-bold' : 'hover:bg-slate-50 text-slate-700'
                   }`}
                 >
-                  <div className="flex items-center gap-2 truncate pr-2">
-                    <span className="font-mono text-[11px] text-slate-400 font-medium shrink-0">
-                      {p.code.replace(/-/g, '')}
+                  <span className="font-medium truncate pr-2">{item.name}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="px-1.5 py-0.5 font-mono text-[10px] bg-slate-100 text-slate-600 rounded">
+                      {item.type}
                     </span>
-                    <span className="truncate">{p.name}</span>
+                    <span className="font-mono text-[10px] text-slate-400">
+                      {item.code}
+                    </span>
                   </div>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold font-mono bg-slate-100 text-slate-600 shrink-0">
-                    {p.type}
-                  </span>
-                </div>
+                </button>
               ))}
             </div>
           )}
         </div>
 
-        {/* Measure Unit Type Field */}
+        {/* Measure unit selection */}
         <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5 font-sans">
+          <label className="text-xs font-semibold text-slate-700 font-sans block mb-1.5">
             Tipo de Medida
           </label>
-          <input
-            type="text"
-            value={measureType || 'Selecione um produto'}
-            readOnly
-            className={`w-full px-4 py-3 rounded-xl border border-slate-100 text-xs font-semibold tracking-wider font-mono ${
-              measureType 
-                ? 'bg-slate-50 text-slate-800 border-slate-200' 
-                : 'bg-slate-50/50 text-slate-400'
-            }`}
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setMeasureType('KG')}
+              className={`py-2.5 px-4 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition duration-150 cursor-pointer ${
+                measureType === 'KG'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-900/10'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+              }`}
+            >
+              <Scale className="h-4 w-4" />
+              KG (Quilograma)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMeasureType('UN');
+                setBoxes(0);
+              }}
+              className={`py-2.5 px-4 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition duration-150 cursor-pointer ${
+                measureType === 'UN'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-md shadow-slate-900/10'
+                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+              }`}
+            >
+              <PackageOpen className="h-4 w-4" />
+              UN (Unidade)
+            </button>
+          </div>
         </div>
 
-        {/* Box Tare Calculation (Deduction of 1.75 kg) */}
-        {measureType === 'KG' && (
-          <div className="bg-slate-50/70 p-4 rounded-2xl border border-slate-100/80 transition-all">
-            <div className="flex items-center gap-2 mb-2 text-slate-700">
-              <PackageOpen className="h-4 w-4 text-slate-600" />
-              <label className="text-xs font-bold uppercase tracking-wider font-sans">
-                Quantidade de Caixas
-              </label>
-            </div>
+        {/* Boxes and Quantity Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Quantity of Boxes (only active for KG) */}
+          <div>
+            <label className="text-xs font-semibold text-slate-700 font-sans block mb-1.5">
+              Qtd. de Caixas
+            </label>
             <input
               type="number"
               min="0"
               step="1"
               value={boxes === 0 ? '' : boxes}
               onChange={(e) => setBoxes(Math.max(0, parseInt(e.target.value) || 0))}
-              placeholder="0 caixas"
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-1 focus:ring-slate-800 focus:border-slate-800 text-sm font-sans"
+              disabled={measureType === 'UN'}
+              placeholder="0"
+              className={`w-full px-4 py-2.5 rounded-xl border text-sm font-medium font-mono transition duration-150 ${
+                measureType === 'UN'
+                  ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                  : 'bg-slate-50 border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 focus:bg-white'
+              }`}
             />
-            <p className="flex items-start gap-1 text-[10px] text-slate-500 mt-2 font-sans">
-              <Info className="h-3 w-3 mt-0.5 text-slate-400 shrink-0" />
-              Cada caixa desconta {WEIGHT_PER_BOX.toFixed(2)} kg do peso bruto.
-            </p>
           </div>
-        )}
 
-        {/* Quantity (Weight / Units) */}
-        <div>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5 font-sans">
-            {measureType === 'KG' ? 'Peso Total Bruto (kg)' : 'Quantidade'}
-          </label>
-          <div className="relative">
+          {/* Total input quantity (Gross weight or units) */}
+          <div>
+            <label className="text-xs font-semibold text-slate-700 font-sans block mb-1.5">
+              {measureType === 'KG' ? 'Peso Bruto (KG)' : 'Quantidade (UN)'}
+            </label>
             <input
-              type="text"
-              inputMode="decimal"
+              type="number"
+              step="any"
+              min="0.01"
               value={totalQuantity}
-              onChange={(e) => handleQuantityChange(e.target.value)}
-              onBlur={handleQuantityBlur}
-              placeholder={measureType === 'KG' ? '0.00 kg' : '0.00'}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-800 focus:border-slate-800 transition text-sm text-slate-800 font-sans"
+              onChange={(e) => setTotalQuantity(e.target.value)}
+              placeholder="0.00"
+              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium font-mono text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-800 focus:bg-white transition duration-150"
               required
             />
           </div>

@@ -10,21 +10,16 @@ import {
   Clock,
   Search,
   X,
-  Scale,
-  PackageOpen,
-  Filter,
   FileSpreadsheet,
   Trash2,
   Table as TableIcon,
   Layers,
-  ArrowUpDown,
   ArrowDown01,
   ArrowUp10,
   ArrowDownAZ,
   ArrowUpAZ,
   CheckCircle2,
   CalendarDays,
-  Sparkles,
 } from 'lucide-react';
 import { ProductLaunchEntry } from '../types';
 import { PRODUCTS_DATABASE } from '../productsData';
@@ -133,27 +128,23 @@ export default function HistoryAndPeriods({
     }
   };
 
-  // 1. Filter Individual Launches according to Date Range, Search Query, and Unit Filter
+  // 1. Filter Individual Launches according to Date Range, Search Query, and Unit
   const filteredLaunches = useMemo(() => {
     return history.filter(item => {
       const itemDateStr = toLocalISODate(item.timestamp);
 
-      // Start Date check
       if (startDate && itemDateStr < startDate) {
         return false;
       }
 
-      // End Date check
       if (endDate && itemDateStr > endDate) {
         return false;
       }
 
-      // Unit filter check
       if (unitFilter !== 'ALL' && item.type !== unitFilter) {
         return false;
       }
 
-      // Search query check
       if (searchQuery.trim()) {
         const query = searchQuery.trim().toLowerCase();
         const matchesName = item.productName.toLowerCase().includes(query);
@@ -177,7 +168,6 @@ export default function HistoryAndPeriods({
       totalTare: number;
       launchCount: number;
       latestTimestamp: number;
-      classification?: 'NT' | 'QB' | '';
     }>();
 
     filteredLaunches.forEach(launch => {
@@ -193,9 +183,6 @@ export default function HistoryAndPeriods({
         if (launch.timestamp > existing.latestTimestamp) {
           existing.latestTimestamp = launch.timestamp;
         }
-        if (launch.classification) {
-          existing.classification = launch.classification;
-        }
       } else {
         map.set(key, {
           name: launch.productName,
@@ -206,14 +193,12 @@ export default function HistoryAndPeriods({
           totalTare: Number((launch.tareWeight || 0).toFixed(2)),
           launchCount: 1,
           latestTimestamp: launch.timestamp,
-          classification: launch.classification,
         });
       }
     });
 
     const list = Array.from(map.values());
 
-    // Sort accumulated products
     return list.sort((a, b) => {
       if (accumSortBy === 'quantity') {
         const diff = accumSortOrder === 'desc' 
@@ -264,7 +249,7 @@ export default function HistoryAndPeriods({
     setModalConfig({
       isOpen: true,
       title: 'Excluir Lançamento Individual',
-      message: `Tem certeza que deseja excluir este lançamento de "${name}"? O peso deste registro será abatido das somas acumuladas.`,
+      message: `Tem certeza que deseja excluir este lançamento de "${name}"? Os pesos serão recalculados da tabela.`,
       confirmText: 'Excluir',
       onConfirm: () => {
         onDeleteLaunch(id);
@@ -286,16 +271,16 @@ export default function HistoryAndPeriods({
       'Produto',
       'Código de Barras',
       'Medida',
-      'Quantidade/Peso Bruto',
+      'Quantidade Bruta',
       'Caixas',
       'Tara (kg)',
       'Quantidade Líquida',
-      'Classificação'
     ];
 
     const rows = filteredLaunches.map(item => {
       const dt = new Date(item.timestamp).toLocaleString('pt-BR');
       const code = getProductCode(item.productName);
+
       return [
         `"${dt}"`,
         `"${item.productName.replace(/"/g, '""')}"`,
@@ -305,7 +290,6 @@ export default function HistoryAndPeriods({
         item.boxes || 0,
         (item.tareWeight || 0).toFixed(2),
         item.netQuantity.toFixed(2),
-        `"${item.classification || ''}"`,
       ].join(';');
     });
 
@@ -322,7 +306,6 @@ export default function HistoryAndPeriods({
     showToast('Planilha CSV exportada com sucesso!');
   };
 
-  // Clear date filters
   const handleResetFilters = () => {
     setStartDate('');
     setEndDate('');
@@ -349,7 +332,7 @@ export default function HistoryAndPeriods({
               className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors cursor-pointer"
             >
               <TableIcon className="h-3.5 w-3.5 text-slate-400" />
-              Tabela Atual
+              Tabela de Produtos
             </button>
           </div>
 
@@ -359,10 +342,10 @@ export default function HistoryAndPeriods({
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-900 tracking-tight font-sans">
-                Lançamentos & Períodos
+                Lançamentos & Histórico por Período
               </h2>
               <p className="text-xs text-slate-500">
-                Consulte cada lançamento individual e as somas acumuladas por intervalo de datas
+                Consulte registros individuais e totais acumulados por data
               </p>
             </div>
           </div>
@@ -374,7 +357,7 @@ export default function HistoryAndPeriods({
             <button
               onClick={handleExportCSV}
               className="inline-flex items-center gap-2 px-3.5 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer shadow-xs"
-              title="Baixar planilha CSV com os dados filtrados"
+              title="Baixar planilha CSV com dados do período selecionado"
             >
               <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
               Exportar CSV
@@ -439,7 +422,6 @@ export default function HistoryAndPeriods({
             <button
               onClick={() => setQuickFilter('yesterday')}
               className="px-2.5 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium rounded-lg transition-colors cursor-pointer"
-              title="Ver apenas os lançamentos de ontem"
             >
               Ontem
             </button>
@@ -520,25 +502,25 @@ export default function HistoryAndPeriods({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         <div className="bg-slate-50/80 border border-slate-200/60 rounded-xl p-3">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-sans">
-            Lançamentos no Período
+            Lançamentos
           </span>
           <span className="text-lg font-bold text-slate-900 font-mono mt-0.5 block">
-            {periodStats.launchCount} <span className="text-xs font-sans text-slate-400 font-normal">({periodStats.accumulatedItemCount} produtos)</span>
+            {periodStats.launchCount}
           </span>
         </div>
 
         <div className="bg-slate-50/80 border border-slate-200/60 rounded-xl p-3">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-sans">
-            Peso Líquido Acumulado
+            Total Peso Líquido (KG)
           </span>
-          <span className="text-lg font-bold text-emerald-700 font-mono mt-0.5 block">
+          <span className="text-lg font-bold text-slate-900 font-mono mt-0.5 block">
             {periodStats.totalKg.toFixed(2)} kg
           </span>
         </div>
 
         <div className="bg-slate-50/80 border border-slate-200/60 rounded-xl p-3">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-sans">
-            Unidades Acumuladas
+            Total em Unidades (UN)
           </span>
           <span className="text-lg font-bold text-slate-900 font-mono mt-0.5 block">
             {periodStats.totalUn.toFixed(2)} un
@@ -547,7 +529,7 @@ export default function HistoryAndPeriods({
 
         <div className="bg-slate-50/80 border border-slate-200/60 rounded-xl p-3">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block font-sans">
-            Caixas e Tara no Período
+            Caixas e Tara
           </span>
           <span className="text-sm font-bold text-slate-800 font-mono mt-0.5 block">
             {periodStats.totalBoxes} cx <span className="text-xs text-red-500 font-normal">(-{periodStats.totalTare.toFixed(2)}kg)</span>
@@ -555,7 +537,7 @@ export default function HistoryAndPeriods({
         </div>
       </div>
 
-      {/* Main Tabs Navigation: Lançamentos Individuais vs Lançamentos Acumulados */}
+      {/* Main Tabs Navigation */}
       <div className="flex items-center justify-between border-b border-slate-200 mb-6">
         <div className="flex items-center gap-3">
           <button
@@ -584,7 +566,7 @@ export default function HistoryAndPeriods({
             }`}
           >
             <Layers className="h-4 w-4" />
-            <span>Lançamentos Acumulados (Período)</span>
+            <span>Lançamentos Acumulados</span>
             <span className={`px-2 py-0.5 rounded-full text-xs font-mono ${
               activeTab === 'accumulated' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'
             }`}>
@@ -644,7 +626,7 @@ export default function HistoryAndPeriods({
               <Calendar className="h-10 w-10 text-slate-400 mx-auto mb-3" />
               <h3 className="text-sm font-bold text-slate-700">Nenhum lançamento individual encontrado</h3>
               <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                Não há registros individuais gravados para os filtros ou período de datas selecionados.
+                Não há registros gravados para os filtros ou período de datas selecionados.
               </p>
               {(startDate || endDate || searchQuery || unitFilter !== 'ALL') && (
                 <button
@@ -687,7 +669,6 @@ export default function HistoryAndPeriods({
 
                       return (
                         <tr key={item.id} className="hover:bg-slate-50/60 transition-colors">
-                          {/* Exact Date & Time */}
                           <td className="px-4 py-3.5 whitespace-nowrap">
                             <div className="flex flex-col">
                               <span className="font-semibold text-slate-800 font-mono text-[11px]">
@@ -700,7 +681,6 @@ export default function HistoryAndPeriods({
                             </div>
                           </td>
 
-                          {/* Product Name & Barcode */}
                           <td className="px-4 py-3.5">
                             <div className="flex flex-col gap-1 max-w-[280px]">
                               <span className="font-bold text-slate-900 font-sans text-sm tracking-tight truncate" title={item.productName}>
@@ -710,21 +690,18 @@ export default function HistoryAndPeriods({
                             </div>
                           </td>
 
-                          {/* Unit */}
                           <td className="px-4 py-3.5 text-center">
                             <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold font-mono bg-slate-100 text-slate-700 rounded-md">
                               {item.type}
                             </span>
                           </td>
 
-                          {/* Gross Input */}
                           <td className="px-4 py-3.5 text-right font-mono">
                             <span className="text-slate-600 font-medium">
                               {item.inputQuantity.toFixed(2)}
                             </span>
                           </td>
 
-                          {/* Boxes & Tara */}
                           <td className="px-4 py-3.5 text-center">
                             {item.boxes && item.boxes > 0 ? (
                               <div className="flex flex-col items-center">
@@ -740,7 +717,6 @@ export default function HistoryAndPeriods({
                             )}
                           </td>
 
-                          {/* Net Quantity */}
                           <td className="px-4 py-3.5 text-right font-mono">
                             <span className="font-bold text-emerald-700 text-sm">
                               {item.netQuantity.toFixed(2)}
@@ -750,7 +726,6 @@ export default function HistoryAndPeriods({
                             </span>
                           </td>
 
-                          {/* Delete Action */}
                           <td className="px-4 py-3.5 text-center">
                             <button
                               onClick={() => handleDeleteLaunchClick(item.id, item.productName)}
@@ -772,32 +747,26 @@ export default function HistoryAndPeriods({
                 {filteredLaunches.map((item) => {
                   const dateObj = new Date(item.timestamp);
                   const formattedDate = dateObj.toLocaleDateString('pt-BR');
-                  const formattedTime = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                  const formattedTime = dateObj.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
                   return (
                     <div
                       key={item.id}
                       className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex flex-col gap-3"
                     >
-                      <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
+                      <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2">
                         <div>
-                          <h4 className="font-bold text-slate-900 text-sm font-sans tracking-tight leading-snug">
+                          <h4 className="font-bold text-slate-900 text-sm font-sans tracking-tight">
                             {item.productName}
                           </h4>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] font-mono font-semibold text-slate-500 flex items-center gap-1">
-                              <Clock className="h-3 w-3 text-slate-400" />
-                              {formattedDate} às {formattedTime}
-                            </span>
-                            <span className="inline-flex items-center px-2 py-0.5 text-[9px] font-bold font-mono bg-slate-100 text-slate-700 rounded">
-                              {item.type}
-                            </span>
-                          </div>
+                          <span className="text-[10px] font-mono text-slate-400 block mt-0.5">
+                            {formattedDate} às {formattedTime}
+                          </span>
                         </div>
                         <button
                           onClick={() => handleDeleteLaunchClick(item.id, item.productName)}
-                          className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg cursor-pointer"
-                          title="Excluir lançamento"
+                          className="p-1 text-slate-400 hover:text-red-600 rounded-lg cursor-pointer"
+                          title="Excluir"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -805,9 +774,9 @@ export default function HistoryAndPeriods({
 
                       <Barcode value={getProductCode(item.productName)} height={22} width={1.1} fontSize={8} />
 
-                      <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2.5 rounded-xl text-center">
+                      <div className="grid grid-cols-3 gap-2 bg-slate-50 p-2 rounded-xl text-center">
                         <div>
-                          <span className="text-[9px] text-slate-400 font-sans font-semibold block uppercase">
+                          <span className="text-[9px] text-slate-400 font-sans uppercase font-bold block">
                             Bruto
                           </span>
                           <span className="text-xs font-bold text-slate-700 font-mono">
@@ -815,15 +784,15 @@ export default function HistoryAndPeriods({
                           </span>
                         </div>
                         <div>
-                          <span className="text-[9px] text-slate-400 font-sans font-semibold block uppercase">
-                            Caixas / Tara
+                          <span className="text-[9px] text-slate-400 font-sans uppercase font-bold block">
+                            Caixas
                           </span>
                           <span className="text-xs font-semibold text-slate-700 font-mono">
-                            {item.boxes ? `${item.boxes}cx (-${(item.tareWeight || 0).toFixed(2)})` : '-'}
+                            {item.boxes || 0}
                           </span>
                         </div>
                         <div>
-                          <span className="text-[9px] text-emerald-600 font-sans font-bold block uppercase">
+                          <span className="text-[9px] text-slate-700 font-sans uppercase font-bold block">
                             Líquido
                           </span>
                           <span className="text-xs font-bold text-emerald-700 font-mono">
@@ -840,7 +809,7 @@ export default function HistoryAndPeriods({
         </>
       )}
 
-      {/* CONTENT AREA: TAB 2 - LANÇAMENTOS ACUMULADOS NO PERÍODO */}
+      {/* CONTENT AREA: TAB 2 - LANÇAMENTOS ACUMULADOS */}
       {activeTab === 'accumulated' && (
         <>
           {accumulatedProducts.length === 0 ? (
@@ -868,39 +837,35 @@ export default function HistoryAndPeriods({
                     <tr className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500 font-sans">
                       <th className="px-4 py-3.5">Produto / Código de Barras</th>
                       <th className="px-4 py-3.5 text-center w-24">Medida</th>
-                      <th className="px-4 py-3.5 text-center w-36">Lançamentos</th>
-                      <th className="px-4 py-3.5 text-center w-36">Caixas Totais</th>
-                      <th className="px-4 py-3.5 text-right w-44">Quantidade Acumulada</th>
+                      <th className="px-4 py-3.5 text-center w-32">Lançamentos</th>
+                      <th className="px-4 py-3.5 text-center w-32">Caixas Totais</th>
+                      <th className="px-4 py-3.5 text-right w-40">Total Líquido</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs">
                     {accumulatedProducts.map((p) => (
                       <tr key={p.name} className="hover:bg-slate-50/60 transition-colors">
-                        {/* Product & Barcode */}
                         <td className="px-4 py-4">
-                          <div className="flex flex-col gap-1.5 max-w-[320px]">
+                          <div className="flex flex-col gap-1.5 max-w-[280px]">
                             <span className="font-bold text-slate-900 font-sans text-sm tracking-tight">
                               {p.name}
                             </span>
-                            <Barcode value={getProductCode(p.name)} height={24} width={1.1} fontSize={8} />
+                            <Barcode value={getProductCode(p.name)} height={22} width={1.1} fontSize={8} />
                           </div>
                         </td>
 
-                        {/* Unit */}
                         <td className="px-4 py-4 text-center">
-                          <span className="inline-flex items-center px-2 py-1 text-xs font-bold font-mono bg-slate-100 text-slate-700 rounded-md">
+                          <span className="inline-flex items-center px-2 py-0.5 text-xs font-bold font-mono bg-slate-100 text-slate-700 rounded">
                             {p.type}
                           </span>
                         </td>
 
-                        {/* Frequency / Launch Count */}
                         <td className="px-4 py-4 text-center">
-                          <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full bg-slate-100 text-slate-800 font-sans">
+                          <span className="inline-flex items-center px-2 py-0.5 text-xs font-semibold rounded-full bg-slate-100 text-slate-800 font-sans">
                             {p.launchCount} {p.launchCount === 1 ? 'lançamento' : 'lançamentos'}
                           </span>
                         </td>
 
-                        {/* Total Boxes & Tara */}
                         <td className="px-4 py-4 text-center">
                           {p.totalBoxes > 0 ? (
                             <div className="flex flex-col items-center">
@@ -908,7 +873,7 @@ export default function HistoryAndPeriods({
                                 {p.totalBoxes} cx
                               </span>
                               <span className="text-[10px] text-red-500 font-mono">
-                                Tara: -{p.totalTare.toFixed(2)} kg
+                                -{p.totalTare.toFixed(2)} kg
                               </span>
                             </div>
                           ) : (
@@ -916,16 +881,13 @@ export default function HistoryAndPeriods({
                           )}
                         </td>
 
-                        {/* Total Net Quantity */}
                         <td className="px-4 py-4 text-right">
-                          <div className="flex flex-col items-end">
-                            <span className="font-bold text-slate-950 font-mono text-base">
-                              {p.totalNetQuantity.toFixed(2)}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-sans">
-                              {p.type === 'KG' ? 'kg líquidos' : 'unidades'}
-                            </span>
-                          </div>
+                          <span className="font-bold text-slate-950 font-mono text-sm">
+                            {p.totalNetQuantity.toFixed(2)}
+                          </span>
+                          <span className="text-[10px] text-slate-400 ml-1 font-sans">
+                            {p.type.toLowerCase()}
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -940,42 +902,22 @@ export default function HistoryAndPeriods({
                     key={p.name}
                     className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs flex flex-col gap-3"
                   >
-                    <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
-                      <div>
-                        <h4 className="font-bold text-slate-900 text-sm font-sans tracking-tight">
-                          {p.name}
-                        </h4>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold font-mono bg-slate-100 text-slate-700 rounded">
-                            {p.type}
-                          </span>
-                          <span className="text-[10px] text-slate-500 font-medium">
-                            {p.launchCount} {p.launchCount === 1 ? 'lançamento' : 'lançamentos no período'}
-                          </span>
-                        </div>
-                      </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900 text-sm font-sans tracking-tight">
+                        {p.name}
+                      </h4>
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {p.launchCount} {p.launchCount === 1 ? 'lançamento no período' : 'lançamentos no período'}
+                      </span>
                     </div>
 
                     <Barcode value={getProductCode(p.name)} height={22} width={1.1} fontSize={8} />
 
                     <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                      <div>
-                        <span className="text-[10px] text-slate-400 font-sans block uppercase">
-                          Caixas / Tara
-                        </span>
-                        <span className="text-xs font-semibold text-slate-700 font-mono">
-                          {p.totalBoxes > 0 ? `${p.totalBoxes} cx (-${p.totalTare.toFixed(2)}kg)` : 'Sem caixas'}
-                        </span>
-                      </div>
-
-                      <div className="text-right">
-                        <span className="text-[10px] text-slate-400 font-sans block uppercase">
-                          Total Acumulado
-                        </span>
-                        <span className="text-base font-bold text-emerald-700 font-mono">
-                          {p.totalNetQuantity.toFixed(2)} {p.type.toLowerCase()}
-                        </span>
-                      </div>
+                      <span className="text-xs text-slate-500">Total Acumulado:</span>
+                      <span className="text-sm font-bold text-slate-900 font-mono">
+                        {p.totalNetQuantity.toFixed(2)} {p.type.toLowerCase()}
+                      </span>
                     </div>
                   </div>
                 ))}

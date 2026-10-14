@@ -13,7 +13,9 @@ export interface RegisteredProduct {
   name: string;
   type: string;
   quantity: number;
-  classification?: 'NT' | 'QB' | '';
+  classification?: 'NT' | 'QB' | 'SPLIT' | '';
+  quantityNT?: number;
+  quantityQB?: number;
   boxes?: number;
   originalWeight?: number;
   timestamp: number;
@@ -27,6 +29,28 @@ export interface ProductLaunchEntry {
   boxes?: number;
   tareWeight?: number;
   netQuantity: number;
-  classification?: 'NT' | 'QB' | '';
+  classification?: 'NT' | 'QB' | 'SPLIT' | '';
+  quantityNT?: number;
+  quantityQB?: number;
   timestamp: number;
+}
+
+export interface LaunchRecord {
+  id: string;
+  name: string;
+  productName?: string;
+  type: string;
+  date: string;
+  timestamp: number;
+  inputQuantity?: number;
+  quantity: number;
+  originalWeight?: number;
+  boxes?: number;
+  tareWeight?: number;
+  netQuantity?: number;
+  undone?: boolean;
+  undoneAt?: number;
+  classification?: 'NT' | 'QB' | 'SPLIT' | '';
+  quantityNT?: number;
+  quantityQB?: number;
 }

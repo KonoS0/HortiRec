@@ -25,6 +25,29 @@
   background: #94a3b8;
 }
 
+/* Viewport safety for mobile devices to prevent horizontal displacement */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+}
+
+/* Hide scrollbar for clean horizontal tab strips */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @media print {
   .no-print {
     display: none !important;
